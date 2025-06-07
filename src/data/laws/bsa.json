@@ -1,0 +1,24 @@
+{
+  "name": "Bharatiya Sakshya Adhiniyam",
+  "shortName": "BSA",
+  "description": "Replaces the Indian Evidence Act",
+  "sections": [
+    {
+      "number": "3",
+      "title": "Evidence defined",
+      "description": "Definition and types of evidence admissible in court",
+      "types": [
+        "Oral evidence",
+        "Documentary evidence",
+        "Electronic evidence"
+      ],
+      "category": "Definitions",
+      "keywords": ["evidence", "proof", "testimony", "documents"],
+      "examples": [
+        "Example 1: Admissible electronic records",
+        "Example 2: Documentary evidence requirements"
+      ],
+      "notes": "Foundational section for understanding evidence law"
+    }
+  ]
+}

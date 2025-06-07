@@ -1,0 +1,95 @@
+{
+  "app": {
+    "name": "Police Assistant",
+    "tagline": "Your Virtual Legal Companion"
+  },
+  "nav": {
+    "home": "Home",
+    "chat": "Chat",
+    "downloads": "Downloads",
+    "contact": "Contact"
+  },
+  "home": {
+    "hero": {
+      "title": "Police Assistant Chatbot",
+      "subtitle": "Instant access to legal information, departmental forms, and SOPs",
+      "cta": "Start Conversation"
+    },
+    "features": {
+      "title": "Key Features",
+      "search": {
+        "title": "Search Legal Codes",
+        "description": "Instantly search through BNS, BNSS, and BSA legal codes with AI-powered accuracy"
+      },
+      "voice": {
+        "title": "Voice Recognition",
+        "description": "Ask questions hands-free using voice commands while on duty"
+      },
+      "multilingual": {
+        "title": "Multilingual Support",
+        "description": "Get assistance in multiple languages for broader accessibility"
+      },
+      "downloads": {
+        "title": "Legal Resources",
+        "description": "Access and download essential legal documents and forms"
+      }
+    },
+    "about": {
+      "title": "About Police Assistant",
+      "description": "Police Assistant is an AI-powered chatbot designed specifically for law enforcement personnel. It provides instant access to legal sections, departmental forms, and Standard Operating Procedures (SOPs) in multiple languages. The assistant helps officers quickly find relevant information, improving efficiency and ensuring accurate legal references."
+    }
+  },
+  "chat": {
+    "placeholder": "Type your question here...",
+    "send": "Send",
+    "voice": "Use voice",
+    "listening": "Listening...",
+    "welcome": "Welcome to Police Assistant! I can help you with legal information, forms, and SOPs. How can I assist you today?",
+    "examples": {
+      "title": "Try asking:",
+      "questions": [
+        "What is section 302 of BNS?",
+        "Tell me about cybercrime reporting",
+        "What are the traffic penalties for drunk driving?",
+        "How to file an FIR?"
+      ]
+    }
+  },
+  "downloads": {
+    "title": "Legal Resources",
+    "subtitle": "Download important legal documents and forms",
+    "categories": {
+      "all": "All",
+      "bns": "BNS",
+      "bnss": "BNSS",
+      "bsa": "BSA",
+      "other": "Other Resources"
+    },
+    "search": "Search resources...",
+    "downloadBtn": "Download",
+    "noResults": "No documents found matching your search criteria."
+  },
+  "contact": {
+    "title": "Contact Us",
+    "subtitle": "Get in touch with our support team",
+    "form": {
+      "name": "Your Name",
+      "email": "Email Address",
+      "subject": "Subject",
+      "message": "Your Message",
+      "submit": "Send Message",
+      "success": "Your message has been sent successfully!",
+      "error": "There was an error sending your message. Please try again."
+    },
+    "emergency": {
+      "title": "Emergency Helplines",
+      "description": "For immediate assistance, contact these emergency numbers:"
+    }
+  },
+  "footer": {
+    "rights": "All Rights Reserved",
+    "disclaimer": "This is an official service for police personnel.",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Use"
+  }
+}

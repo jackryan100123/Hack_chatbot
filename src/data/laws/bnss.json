@@ -1,0 +1,22 @@
+{
+  "name": "Bharatiya Nagarik Suraksha Sanhita",
+  "shortName": "BNSS",
+  "description": "Replaces the Code of Criminal Procedure (CrPC)",
+  "sections": [
+    {
+      "number": "154",
+      "title": "Information in cognizable cases",
+      "description": "Procedure for recording First Information Report (FIR)",
+      "procedure": [
+        "Police shall reduce the information into writing",
+        "Information shall be read over to the informant",
+        "Every such information shall be signed by the informant"
+      ],
+      "category": "Investigation",
+      "keywords": ["FIR", "complaint", "cognizable", "investigation"],
+      "timeLimit": "Immediate registration required",
+      "forms": ["FIR Form", "Zero FIR Form"],
+      "notes": "Can be filed at any police station regardless of jurisdiction"
+    }
+  ]
+}
