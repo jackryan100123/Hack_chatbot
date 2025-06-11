@@ -4,6 +4,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { processUnifiedQuery } from '../services/chatService';
 import bns from '../data/laws/bns.json';
 import ipc from '../data/laws/ipc.json';
+import bnss from '../data/laws/bnss.json';
+import bsa from '../data/laws/bsa.json';
+import crpc from '../data/laws/crpc.json';
+import iea from '../data/laws/iea.json';
 
 interface ChatContextType {
   conversations: Conversation[];
@@ -16,38 +20,50 @@ interface ChatContextType {
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-// Enhanced search function with dual-law comprehensive relevance scoring
+// Enhanced search function with comprehensive law coverage
 const searchSectionsByKeywords = (keywords: string[]) => {
   const lowerKeywords = keywords.map(k => k.toLowerCase());
   const allSections: any[] = [];
   
-  // Flatten all sections from BNS (current law)
-  bns.forEach((chapter: any) => {
-    if (chapter.sections) {
-      chapter.sections.forEach((section: any) => {
-        allSections.push({
-          ...section,
-          chapter_title: chapter.chapter_title,
-          chapter_name: chapter.chapter_name,
-          law_type: 'BNS'
-        });
+  // Helper function to add sections from any law file
+  const addSectionsFromLaw = (lawData: any, lawType: string, isNewLaw: boolean) => {
+    if (Array.isArray(lawData)) {
+      lawData.forEach((item: any) => {
+        if (item.sections) {
+          item.sections.forEach((section: any) => {
+            allSections.push({
+              ...section,
+              chapter_title: item.chapter_title,
+              chapter_name: item.chapter_name,
+              law_type: lawType,
+              is_new_law: isNewLaw
+            });
+          });
+        } else if (item.Section) {
+          // Handle IPC/CrPC/IEA format
+          allSections.push({
+            ...item,
+            section_number: item.Section,
+            content: item.section_desc,
+            chapter_number: item.chapter,
+            chapter_title: item.chapter_title,
+            law_type: lawType,
+            is_new_law: isNewLaw
+          });
+        }
       });
     }
-  });
+  };
+
+  // Add sections from all law files
+  addSectionsFromLaw(bns, 'BNS', true);
+  addSectionsFromLaw(bnss, 'BNSS', true);
+  addSectionsFromLaw(bsa, 'BSA', true);
+  addSectionsFromLaw(ipc, 'IPC', false);
+  addSectionsFromLaw(crpc, 'CrPC', false);
+  addSectionsFromLaw(iea, 'IEA', false);
   
-  // Flatten all sections from IPC (previous law)
-  ipc.forEach((section: any) => {
-    allSections.push({
-      ...section,
-      section_number: section.Section,
-      content: section.section_desc,
-      chapter_number: section.chapter,
-      chapter_title: section.chapter_title,
-      law_type: 'IPC'
-    });
-  });
-  
-  // Enhanced scoring algorithm for both laws
+  // Enhanced scoring algorithm for all laws
   const scoredSections = allSections.map(section => {
     let score = 0;
     let hasMatch = false;
@@ -55,13 +71,37 @@ const searchSectionsByKeywords = (keywords: string[]) => {
       titleMatches: 0,
       contentMatches: 0,
       exactMatches: 0,
-      sectionNumberMatch: false
+      sectionNumberMatch: false,
+      semanticMatches: 0,
+      lawTypeMatch: false
     };
     
     const sectionTitleLower = section.section_title?.toLowerCase() || '';
     const sectionContent = Array.isArray(section.content) 
       ? section.content.join(' ').toLowerCase() 
       : (section.content || '').toLowerCase();
+    
+    // Check for specific law type request in keywords
+    const lawTypeKeywords = {
+      'bns': ['bns', 'bharatiya nyaya', 'nyaya sanhita'],
+      'bnss': ['bnss', 'bharatiya nagarik', 'nagarik suraksha'],
+      'bsa': ['bsa', 'bharatiya sakshya', 'sakshya adhiniyam'],
+      'ipc': ['ipc', 'indian penal', 'penal code'],
+      'crpc': ['crpc', 'criminal procedure', 'code of criminal'],
+      'iea': ['iea', 'evidence act', 'indian evidence']
+    };
+
+    // Check if user specifically requested a law type
+    const requestedLawType = Object.entries(lawTypeKeywords).find(([_, keywords]) =>
+      keywords.some(k => lowerKeywords.some(lk => lk.includes(k.toLowerCase())))
+    )?.[0].toUpperCase();
+
+    // If specific law type requested, boost score for matching sections
+    if (requestedLawType && section.law_type === requestedLawType) {
+      score += 100; // Significant boost for matching requested law type
+      matchDetails.lawTypeMatch = true;
+      hasMatch = true;
+    }
     
     // 1. Check section title (highest priority)
     lowerKeywords.forEach(lk => {
@@ -86,7 +126,7 @@ const searchSectionsByKeywords = (keywords: string[]) => {
       }
     });
     
-    // 2. Check section content (medium priority)
+    // 2. Check section content
     if (section.content) {
       const contentArray = Array.isArray(section.content) ? section.content : [section.content];
       contentArray.forEach((contentItem: string) => {
@@ -99,13 +139,13 @@ const searchSectionsByKeywords = (keywords: string[]) => {
             // Base score for content match
             score += 8;
             
-            // Bonus for multiple occurrences of same keyword
+            // Bonus for multiple occurrences
             const occurrences = (contentLower.match(new RegExp(lk, 'g')) || []).length;
             if (occurrences > 1) {
               score += Math.min(occurrences * 3, 15);
             }
             
-            // Bonus for keyword in important context
+            // Bonus for important context
             const importantContexts = ['punishment', 'shall be', 'defined', 'means', 'imprisonment', 'fine', 'penalty'];
             const hasImportantContext = importantContexts.some(context => 
               contentLower.includes(context) && contentLower.includes(lk)
@@ -118,7 +158,7 @@ const searchSectionsByKeywords = (keywords: string[]) => {
       });
     }
     
-    // 3. Check section number for exact matches
+    // 3. Check section number
     lowerKeywords.forEach(lk => {
       if (section.section_number === lk || 
           `section ${section.section_number}` === lk.toLowerCase() ||
@@ -140,7 +180,7 @@ const searchSectionsByKeywords = (keywords: string[]) => {
       score += Math.pow(uniqueMatchedKeywords.length, 2) * 5;
     }
     
-    // 5. Chapter relevance bonus
+    // 5. Chapter relevance
     const chapterTitleLower = (section.chapter_title + ' ' + (section.chapter_name || '')).toLowerCase();
     lowerKeywords.forEach(lk => {
       if (chapterTitleLower.includes(lk)) {
@@ -149,14 +189,15 @@ const searchSectionsByKeywords = (keywords: string[]) => {
       }
     });
     
-    // 6. Semantic relevance bonus
+    // 6. Semantic relevance
     const semanticMatches = getSemanticMatches(lowerKeywords, sectionTitleLower, sectionContent);
     score += semanticMatches * 3;
+    matchDetails.semanticMatches = semanticMatches;
     if (semanticMatches > 0) hasMatch = true;
     
-    // 7. BNS preference bonus (since it's the current law)
-    if (section.law_type === 'BNS') {
-      score += 3;
+    // 7. New law preference bonus (only if no specific law type requested)
+    if (!requestedLawType && section.is_new_law) {
+      score += 5;
     }
     
     return { 
@@ -164,18 +205,25 @@ const searchSectionsByKeywords = (keywords: string[]) => {
       relevanceScore: score, 
       hasMatch,
       matchDetails,
-      uniqueKeywordMatches: uniqueMatchedKeywords.length
+      uniqueKeywordMatches: uniqueMatchedKeywords.length,
+      requestedLawType: requestedLawType
     };
   })
   .filter(section => section.hasMatch)
   .sort((a, b) => {
-    // First prioritize by relevance score
+    // First prioritize by law type match if requested
+    if (a.requestedLawType || b.requestedLawType) {
+      if (a.law_type === a.requestedLawType && b.law_type !== b.requestedLawType) return -1;
+      if (b.law_type === b.requestedLawType && a.law_type !== a.requestedLawType) return 1;
+    }
+    
+    // Then by relevance score
     const scoreDiff = b.relevanceScore - a.relevanceScore;
     if (Math.abs(scoreDiff) > 5) return scoreDiff;
     
-    // Then by law type preference (BNS over IPC for same relevance)
-    if (a.law_type !== b.law_type && Math.abs(scoreDiff) <= 5) {
-      return a.law_type === 'BNS' ? -1 : 1;
+    // Then by law type preference (new laws over old laws for same relevance)
+    if (a.is_new_law !== b.is_new_law && Math.abs(scoreDiff) <= 5) {
+      return a.is_new_law ? -1 : 1;
     }
     
     // Finally by exact relevance score
@@ -185,9 +233,10 @@ const searchSectionsByKeywords = (keywords: string[]) => {
   return scoredSections;
 };
 
-// Semantic matching for related legal terms
+// Enhanced semantic matching with more legal terms
 const getSemanticMatches = (keywords: string[], title: string, content: string): number => {
   const semanticGroups = {
+    // Criminal Law Terms
     'murder': ['kill', 'death', 'homicide', 'culpable', 'causing death', 'intentionally'],
     'theft': ['steal', 'dishonest', 'movable', 'property', 'dishonestly', 'taking'],
     'assault': ['hurt', 'grievous', 'simple', 'voluntarily', 'causing hurt', 'violence'],
@@ -202,7 +251,22 @@ const getSemanticMatches = (keywords: string[], title: string, content: string):
     'bribery': ['corruption', 'gratification', 'illegal', 'public servant'],
     'forgery': ['false', 'document', 'signature', 'fraudulent', 'making'],
     'dowry': ['marriage', 'demand', 'harassment', 'death', 'cruelty'],
-    'domestic': ['violence', 'cruelty', 'wife', 'husband', 'matrimonial']
+    'domestic': ['violence', 'cruelty', 'wife', 'husband', 'matrimonial'],
+    
+    // Procedural Terms
+    'arrest': ['apprehend', 'detain', 'custody', 'police', 'warrant'],
+    'bail': ['release', 'bond', 'surety', 'anticipatory', 'regular'],
+    'trial': ['proceedings', 'evidence', 'witness', 'prosecution', 'defense'],
+    'appeal': ['higher court', 'challenge', 'review', 'revision'],
+    'witness': ['testimony', 'deposition', 'examination', 'cross-examination'],
+    'evidence': ['proof', 'document', 'testimony', 'material', 'circumstantial'],
+    
+    // General Legal Terms
+    'jurisdiction': ['territorial', 'subject matter', 'pecuniary', 'concurrent'],
+    'limitation': ['time limit', 'period', 'barred', 'prescribed'],
+    'procedure': ['process', 'steps', 'method', 'manner', 'way'],
+    'rights': ['entitlement', 'privilege', 'claim', 'interest', 'protection'],
+    'duties': ['obligation', 'responsibility', 'liability', 'accountability']
   };
   
   let semanticScore = 0;
@@ -210,7 +274,6 @@ const getSemanticMatches = (keywords: string[], title: string, content: string):
   
   keywords.forEach(keyword => {
     const relatedTerms = semanticGroups[keyword as keyof typeof semanticGroups];
-
     if (Array.isArray(relatedTerms)) {
       relatedTerms.forEach(relatedTerm => {
         if (fullText.includes(relatedTerm)) {
@@ -221,6 +284,22 @@ const getSemanticMatches = (keywords: string[], title: string, content: string):
   });
   
   return semanticScore;
+};
+
+// Helper function to build conversation history for AI context
+const buildConversationHistory = (messages: Message[]): Array<{role: string, content: string}> => {
+  // Exclude the welcome message and get the last 6 messages (3 exchanges) for context
+  const conversationMessages = messages.filter(msg => 
+    !msg.content.includes('Welcome to Legal Assistant!')
+  );
+  
+  // Get recent messages for context (limit to avoid token overflow)
+  const recentMessages = conversationMessages.slice(-6);
+  
+  return recentMessages.map(msg => ({
+    role: msg.role,
+    content: msg.content
+  }));
 };
 
 export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -239,7 +318,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const welcomeMessage: Message = {
       id: uuidv4(),
-      content: '⚖️ **Welcome to Legal Assistant!**\n\nI can help you with questions about Indian laws, particularly the Bharatiya Nyaya Sanhita (BNS) and Indian Penal Code (IPC). I can also answer general questions on any topic.\n\n**Examples of what you can ask:**\n- "What is section 1 about?"\n- "Tell me about definitions"\n- "What are the preliminary provisions?"\n- "Show me section 2"\n- "What is murder under BNS?"\n- "Compare murder in BNS and IPC"\n- "Tell me about theft"\n- "Differences between BNS and IPC"\n- "How does the weather affect crime rates?"\n- "What is artificial intelligence?"\n\nPlease ask your question!',
+      content: '⚖️ **Welcome to Legal Assistant!**\n\nI can help you with questions about Indian laws, particularly the Bharatiya Nyaya Sanhita (BNS) and Indian Penal Code (IPC). I can also answer general questions on any topic.\n\n**Examples of what you can ask:**\n- "What is section 1 about?"\n- "Tell me about definitions"\n- "What are the preliminary provisions?"\n- "What is murder under BNS?"\n- "Compare murder in BNS and IPC"\n- "Tell me about theft"\n- "Differences between BNS and IPC"\n\nI maintain conversation context, so you can ask follow-up questions that reference our previous discussion!\n\nPlease ask your question!',
       role: 'assistant',
       timestamp: new Date(),
     };
@@ -277,8 +356,11 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       setLoading(true);
       
-      // Use the unified processing function from chatService
-      const responseContent = await processUnifiedQuery(content, searchSectionsByKeywords);
+      // Build conversation history for context (excluding the current user message)
+      const conversationHistory = buildConversationHistory(updatedConversation.messages.slice(0, -1));
+      
+      // Use the unified processing function with conversation context
+      const responseContent = await processUnifiedQuery(content, searchSectionsByKeywords, conversationHistory);
 
       const assistantMessage: Message = {
         id: uuidv4(),
@@ -328,7 +410,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const welcomeMessage: Message = {
       id: uuidv4(),
-      content: '⚖️ **Welcome to Legal Assistant!**\n\nI can help you with questions about Indian laws, particularly the Bharatiya Nyaya Sanhita (BNS) and Indian Penal Code (IPC). I can also answer general questions on any topic.\n\n**Examples of what you can ask:**\n- "What is section 1 about?"\n- "Tell me about definitions"\n- "What are the preliminary provisions?"\n- "Show me section 2"\n- "What is murder under BNS?"\n- "Compare murder in BNS and IPC"\n- "Tell me about theft"\n- "Differences between BNS and IPC"\n- "How does the weather affect crime rates?"\n- "What is artificial intelligence?"\n\nPlease ask your question!',
+      content: '⚖️ **Welcome to Legal Assistant!**\n\nI can help you with questions about Indian laws, particularly the Bharatiya Nyaya Sanhita (BNS) and Indian Penal Code (IPC). I can also answer general questions on any topic.\n\n**Examples of what you can ask:**\n- "What is section 1 about?"\n- "Tell me about definitions"\n "Show me section 2"\n- "What is murder under BNS?"\n- "Compare murder in BNS and IPC"\n- "Tell me about theft"\n- "Differences between BNS and IPC"\n\nI maintain conversation context, so you can ask follow-up questions that reference our previous discussion!\n\nPlease ask your question!',
       role: 'assistant',
       timestamp: new Date(),
     };

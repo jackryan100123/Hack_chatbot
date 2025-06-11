@@ -1,22 +1,55 @@
 {
-  "name": "Bharatiya Nagarik Suraksha Sanhita",
-  "shortName": "BNSS",
-  "description": "Replaces the Code of Criminal Procedure (CrPC)",
-  "sections": [
-    {
-      "number": "154",
-      "title": "Information in cognizable cases",
-      "description": "Procedure for recording First Information Report (FIR)",
-      "procedure": [
-        "Police shall reduce the information into writing",
-        "Information shall be read over to the informant",
-        "Every such information shall be signed by the informant"
-      ],
-      "category": "Investigation",
-      "keywords": ["FIR", "complaint", "cognizable", "investigation"],
-      "timeLimit": "Immediate registration required",
-      "forms": ["FIR Form", "Zero FIR Form"],
-      "notes": "Can be filed at any police station regardless of jurisdiction"
-    }
-  ]
-}
+          "section_number": 1,
+          "section_title": "1st July, 2024, vide notification No. S.O. 849(E), dated, 23rd day of February, 2024, see Gazette of India, Extraordinary,",
+          "content": {
+            "text": [
+              "Part II, sec. 3(ii).",
+              "8",
+              "(i) all  statements  including  statements  given  electronically  which  the  Court  permits  or",
+              "requires to be made before it by witnesses in relation to matters of fact under inquiry and such",
+              "statements are called oral evidence;",
+              "(ii) all documents including electronic or digital records produced for the inspection of the",
+              "Court and such documents are called documentary evidence;",
+              "(f) “fact” means and includes—",
+              "(i) any thing, state of things, or relation of things, capable of being perceived by the senses;",
+              "(ii) any mental condition of which any person is conscious."
+            ],
+            "explanation": "Civil Procedure, any Court records an issue of fact, the fact to be asserted or denied in the answer to such issue is a fact in issue.",
+            "illustration": [
+              "(i) That there are certain objects arranged in a certain order in a certain place, is a fact.",
+              "(ii) That a person heard or saw something, is a fact.",
+              "(iii) That a person said certain words, is a fact.",
+              "(iv)  That  a  person  holds  a  certain  opinion,  has  a  certain  intention,  acts  in  good  faith,  or",
+              "fraudulently, or uses a particular word in a particular sense, or is or was at a specified time conscious",
+              "of a particular sensation, is a fact;",
+              "(g) “facts in issue” means and includes any fact from which, either by itself or in connection with",
+              "other facts, the existence, non-existence, nature or extent of any right, liability or disability, asserted",
+              "or denied in any suit or proceeding, necessarily follows.",
+              "A is accused of the murder of B. At his trial, the following facts may be in issue:—",
+              "(i) That A caused B's death.",
+              "(ii) That A intended to cause B's death.",
+              "(iii) That A had received grave and sudden provocation from B.",
+              "(iv) That A, at the  time  of doing the  act which caused  B’s  death, was, by reason  of",
+              "unsoundness of mind, incapable of knowing its nature;",
+              "(h)  “may  presume”.—Whenever  it  is  provided  by  this  Adhiniyam  that  the  Court  may",
+              "presume a fact, it may either regard such fact as proved, unless and until it is disproved or may",
+              "call for proof of it;",
+              "(i) “not proved”.—A fact is said to be not proved when it is neither proved nor disproved;",
+              "(j) “proved”.—A fact is said to be proved when, after considering the matters before it, the",
+              "Court either believes it to exist, or considers its existence so probable that a prudent man ought,",
+              "under the circumstances of the particular case, to act upon the supposition that it exists;",
+              "(k) “relevant”.—A fact is said to be relevant to another when it is connected with the other in",
+              "any of the ways referred to in the provisions of this Adhiniyam relating to the relevancy of facts;",
+              "(l) “shall presume”.—Whenever it is directed by this Adhiniyam that the Court shall presume",
+              "a fact, it shall regard such fact as proved, unless and until it is disproved.",
+              "9",
+              "(2) Words and expressions used herein and not defined but defined in the Information Technology",
+              "Act,  2000  (21  of  2000),  the  Bharatiya  Nagarik  Suraksha  Sanhita,  2023  and  the  Bharatiya  Nyaya",
+              "Sanhita, 2023 shall have the same meanings as assigned to them in the said Act and Sanhitas.",
+              "PART II",
+              "CHAPTER II",
+              "RELEVANCY OF FACTS"
+            ]
+          }
+        }
+        

@@ -74,12 +74,12 @@ const Hero: React.FC = () => {
                 </div>
                 <div className="flex justify-end mb-4">
                   <div className="bg-primary-600 text-white rounded-lg rounded-tr-none p-3 max-w-[80%]">
-                    <p>What is section 302 of BNS?</p>
+                    <p>What is section 43 of BNS?</p>
                   </div>
                 </div>
                 <div className="flex justify-start">
                   <div className="bg-primary-100 rounded-lg rounded-tl-none p-3 max-w-[80%] animate-pulse">
-                    <p className="text-neutral-800">Section 302 of Bharatiya Nyaya Sanhita (BNS) deals with the punishment for murder...</p>
+                    <p className="text-neutral-800">Section 43 of Bharatiya Nyaya Sanhita (BNS) deals with...</p>
                   </div>
                 </div>
               </div>
