@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_KEY = process.env.GROQ_API_KEY;
+const API_KEY = import.meta.env.VITE_GROQ_API_KEY;
 
 // Language detection keywords
 const LANGUAGE_KEYWORDS = {
@@ -44,7 +44,7 @@ const SCRIPT_CONVERSION = {
     't': 'ਤ', 'th': 'ਥ', 'd': 'ਦ', 'dh': 'ਧ', 'n': 'ਨ',
     'p': 'ਪ', 'ph': 'ਫ', 'b': 'ਬ', 'bh': 'ਭ', 'm': 'ਮ',
     'y': 'ਯ', 'r': 'ਰ', 'l': 'ਲ', 'v': 'ਵ', 'sh': 'ਸ਼',
-    's': 'ਸ', 'h': 'ਹ', 'l_alt': 'ਲ਼', 'ksh': 'ਕ੍ਸ਼', 'tr': 'ਤ੍ਰ',
+    's': 'ਸ', 'h': 'ਹ', 'l_alt': 'ਲ਼', 'ksh': 'ਕ੍ਸ਼', 'tr': 'ਤ੍ਰ',
     'gy': 'ਜ੍ਞ'
   },
   telugu: {
@@ -292,4 +292,4 @@ Output the language code only: 'hindi', 'punjabi', 'telugu', 'malayalam', or 'en
   public isSupported(): boolean {
     return !!this.recognition;
   }
-} 
+}
