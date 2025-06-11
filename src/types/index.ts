@@ -13,6 +13,22 @@ export interface Conversation {
   updatedAt: Date;
 }
 
+export interface ProcessedDocument {
+  id: string;
+  content: string;
+  metadata: {
+    type: 'complaint' | 'fir' | 'legal_document' | 'other';
+    title: string;
+    date?: string;
+    caseNumber?: string;
+    sections?: string[];
+    keywords?: string[];
+  };
+  fileName: string;
+  fileSize: number;
+  uploadedAt: Date;
+}
+
 export interface LawBooklet {
   id: string;
   title: string;

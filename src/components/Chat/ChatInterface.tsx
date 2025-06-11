@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Send, Mic, MicOff, Trash, Upload } from 'lucide-react';
+import { Send, Mic, MicOff, Trash, Upload, FileText } from 'lucide-react';
 import { useChat } from '../../context/ChatContext';
 import Button from '../ui/Button';
 import ChatMessage from './ChatMessage';
+import FileUpload from './FileUpload';
+import DocumentViewer from './DocumentViewer';
 import { motion, AnimatePresence } from 'framer-motion';
-
-import { FileService, ProcessedDocument } from '../../services/fileService';
 import { SpeechService } from '../../services/speechService';
 
 // Custom type declarations for SpeechRecognition API
@@ -72,15 +72,39 @@ declare global {
   }
 }
 
+interface ProcessedDocument {
+  id: string;
+  content: string;
+  metadata: {
+    type: 'complaint' | 'fir' | 'legal_document' | 'other';
+    title: string;
+    date?: string;
+    caseNumber?: string;
+    sections?: string[];
+    keywords?: string[];
+  };
+  fileName: string;
+  fileSize: number;
+  uploadedAt: Date;
+}
+
 const ChatInterface: React.FC = () => {
   const { t } = useTranslation();
-  const { currentConversation, sendMessage, loading, clearConversation } = useChat();
+  const { 
+    currentConversation, 
+    currentDocument, 
+    sendMessage, 
+    loading, 
+    clearConversation, 
+    setCurrentDocument,
+    queryDocument 
+  } = useChat();
+  
   const [inputValue, setInputValue] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [isSpeechSupported, setIsSpeechSupported] = useState(false);
   const [showFileUpload, setShowFileUpload] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const fileService = useRef(new FileService());
   const speechService = useRef(new SpeechService());
 
   useEffect(() => {
@@ -134,13 +158,25 @@ const ChatInterface: React.FC = () => {
 
   const handleDocumentProcessed = async (document: ProcessedDocument) => {
     setShowFileUpload(false);
-    const message = `Document processed: ${document.metadata.title} (${document.metadata.type})`;
+    setCurrentDocument(document);
+    
+    // Send a message about the processed document
+    const message = `📄 **Document Uploaded Successfully!**\n\n**${document.metadata.title}**\n\n` +
+      `**Type:** ${document.metadata.type.toUpperCase()}\n` +
+      `**File:** ${document.fileName}\n` +
+      (document.metadata.caseNumber ? `**Case Number:** ${document.metadata.caseNumber}\n` : '') +
+      (document.metadata.date ? `**Date:** ${document.metadata.date}\n` : '') +
+      (document.metadata.sections && document.metadata.sections.length > 0 ? 
+        `**Legal Sections Found:** ${document.metadata.sections.join(', ')}\n` : '') +
+      `\nYou can now ask questions about this document and I'll provide relevant legal analysis and applicable sections.`;
+    
     await sendMessage(message);
   };
 
   const handleFileError = (error: Error) => {
     console.error('File processing error:', error);
     setShowFileUpload(false);
+    // You could show an error message to the user here
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -150,11 +186,27 @@ const ChatInterface: React.FC = () => {
     }
   };
 
+  const handleRemoveDocument = () => {
+    setCurrentDocument(null);
+  };
+
+  const handleQueryDocument = (query: string) => {
+    setInputValue(query);
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-10rem)] md:h-[calc(100vh-8rem)] bg-neutral-50 rounded-lg shadow-md overflow-hidden">
       {/* Chat Header */}
       <div className="bg-primary-800 text-white p-4 flex justify-between items-center">
-        <h2 className="text-lg font-semibold">{t('app.name')}</h2>
+        <div className="flex items-center space-x-3">
+          <h2 className="text-lg font-semibold">{t('app.name')}</h2>
+          {currentDocument && (
+            <div className="flex items-center space-x-2 bg-primary-700 px-3 py-1 rounded-full">
+              <FileText className="h-4 w-4" />
+              <span className="text-sm">{currentDocument.metadata.type.toUpperCase()}</span>
+            </div>
+          )}
+        </div>
         <div className="flex space-x-2">
           <Button
             variant="outline"
@@ -177,7 +229,14 @@ const ChatInterface: React.FC = () => {
         </div>
       </div>
 
-      
+      {/* Document Viewer */}
+      {currentDocument && (
+        <DocumentViewer
+          document={currentDocument}
+          onClose={handleRemoveDocument}
+          onQueryDocument={handleQueryDocument}
+        />
+      )}
 
       {/* Messages Container */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -214,7 +273,11 @@ const ChatInterface: React.FC = () => {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={t('chat.placeholder')}
+            placeholder={
+              currentDocument 
+                ? `Ask about your ${currentDocument.metadata.type}...`
+                : t('chat.placeholder')
+            }
             className="flex-1 resize-none border border-neutral-300 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             rows={1}
             disabled={loading}
@@ -251,6 +314,14 @@ const ChatInterface: React.FC = () => {
           </p>
         )}
       </div>
+
+      {/* File Upload Modal */}
+      <FileUpload
+        isVisible={showFileUpload}
+        onFileProcessed={handleDocumentProcessed}
+        onError={handleFileError}
+        onClose={() => setShowFileUpload(false)}
+      />
     </div>
   );
 };

@@ -9,13 +9,32 @@ import bsa from '../data/laws/bsa.json';
 import crpc from '../data/laws/crpc.json';
 import iea from '../data/laws/iea.json';
 
+interface ProcessedDocument {
+  id: string;
+  content: string;
+  metadata: {
+    type: 'complaint' | 'fir' | 'legal_document' | 'other';
+    title: string;
+    date?: string;
+    caseNumber?: string;
+    sections?: string[];
+    keywords?: string[];
+  };
+  fileName: string;
+  fileSize: number;
+  uploadedAt: Date;
+}
+
 interface ChatContextType {
   conversations: Conversation[];
   currentConversation: Conversation | null;
+  currentDocument: ProcessedDocument | null;
   loading: boolean;
   createConversation: () => void;
   sendMessage: (content: string) => Promise<void>;
   clearConversation: () => void;
+  setCurrentDocument: (document: ProcessedDocument | null) => void;
+  queryDocument: (query: string) => Promise<void>;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -305,6 +324,7 @@ const buildConversationHistory = (messages: Message[]): Array<{role: string, con
 export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversation, setCurrentConversation] = useState<Conversation | null>(null);
+  const [currentDocument, setCurrentDocument] = useState<ProcessedDocument | null>(null);
   const [loading, setLoading] = useState(false);
 
   const createConversation = () => {
@@ -318,7 +338,7 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const welcomeMessage: Message = {
       id: uuidv4(),
-      content: '⚖️ **Welcome to Legal Assistant!**\n\nI can help you with questions about Indian laws, particularly the Bharatiya Nyaya Sanhita (BNS) and Indian Penal Code (IPC). I can also answer general questions on any topic.\n\n**Examples of what you can ask:**\n- "What is section 1 about?"\n- "Tell me about definitions"\n- "What are the preliminary provisions?"\n- "What is murder under BNS?"\n- "Compare murder in BNS and IPC"\n- "Tell me about theft"\n- "Differences between BNS and IPC"\n\nI maintain conversation context, so you can ask follow-up questions that reference our previous discussion!\n\nPlease ask your question!',
+      content: '⚖️ **Welcome to Legal Assistant!**\n\nI can help you with questions about Indian laws, particularly the Bharatiya Nyaya Sanhita (BNS) and Indian Penal Code (IPC). I can also analyze uploaded legal documents like FIRs and complaints.\n\n**Examples of what you can ask:**\n- "What is section 1 about?"\n- "Tell me about definitions"\n- "What are the preliminary provisions?"\n- "What is murder under BNS?"\n- "Compare murder in BNS and IPC"\n- "Tell me about theft"\n- "Differences between BNS and IPC"\n\n**Document Analysis:**\n- Upload FIRs, complaints, or legal documents\n- Ask questions about uploaded documents\n- Get relevant legal sections for your case\n\nI maintain conversation context, so you can ask follow-up questions that reference our previous discussion!\n\nPlease ask your question or upload a document!',
       role: 'assistant',
       timestamp: new Date(),
     };
@@ -359,8 +379,15 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Build conversation history for context (excluding the current user message)
       const conversationHistory = buildConversationHistory(updatedConversation.messages.slice(0, -1));
       
-      // Use the unified processing function with conversation context
-      const responseContent = await processUnifiedQuery(content, searchSectionsByKeywords, conversationHistory);
+      let responseContent: string;
+      
+      // If there's a current document, include it in the context
+      if (currentDocument) {
+        responseContent = await processDocumentQuery(content, currentDocument, conversationHistory);
+      } else {
+        // Use the unified processing function with conversation context
+        responseContent = await processUnifiedQuery(content, searchSectionsByKeywords, conversationHistory);
+      }
 
       const assistantMessage: Message = {
         id: uuidv4(),
@@ -405,12 +432,122 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const queryDocument = async (query: string) => {
+    if (!currentDocument) return;
+    await sendMessage(query);
+  };
+
+  const processDocumentQuery = async (
+    query: string, 
+    document: ProcessedDocument, 
+    conversationHistory: Array<{role: string, content: string}>
+  ): Promise<string> => {
+    const API_KEY = import.meta.env.VITE_GROQ_API_KEY;
+    
+    if (!API_KEY) {
+      return `Based on the uploaded document "${document.metadata.title}", I can see it's a ${document.metadata.type}. However, I need the GROQ API key to provide detailed analysis. Please check your environment configuration.`;
+    }
+
+    try {
+      // Extract keywords from the document and query
+      const documentKeywords = [
+        ...(document.metadata.keywords || []),
+        ...(document.metadata.sections || []),
+        document.metadata.type,
+        ...(document.metadata.caseNumber ? [document.metadata.caseNumber] : [])
+      ];
+
+      // Search for relevant legal sections
+      const queryKeywords = query.toLowerCase().split(/\s+/).filter(word => word.length > 2);
+      const allKeywords = [...new Set([...documentKeywords, ...queryKeywords])];
+      const relevantSections = searchSectionsByKeywords(allKeywords);
+
+      // Build conversation context
+      const conversationContext = conversationHistory.length > 0 
+        ? `\n\nCONVERSATION HISTORY (for context):\n${conversationHistory.map(msg => `${msg.role.toUpperCase()}: ${msg.content}`).join('\n\n')}\n\n`
+        : '';
+
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [
+            {
+              role: 'system',
+              content: `You are a specialized legal assistant analyzing uploaded legal documents in the context of Indian law.
+
+DOCUMENT CONTEXT:
+- Document Type: ${document.metadata.type}
+- Title: ${document.metadata.title}
+- Case Number: ${document.metadata.caseNumber || 'Not specified'}
+- Date: ${document.metadata.date || 'Not specified'}
+- Identified Sections: ${document.metadata.sections?.join(', ') || 'None identified'}
+- Keywords: ${document.metadata.keywords?.join(', ') || 'None identified'}
+
+LEGAL SECTIONS AVAILABLE:
+You have access to ${relevantSections.length} relevant legal sections from current laws (BNS, BNSS, BSA) and previous laws (IPC, CrPC, IEA).
+
+RESPONSE GUIDELINES:
+1. **Document Analysis**: Analyze the uploaded document in relation to the user's query
+2. **Legal Mapping**: Map document content to relevant legal sections
+3. **Practical Guidance**: Provide actionable legal advice based on the document
+4. **Section References**: Cite specific legal sections that apply to the document
+5. **Procedural Steps**: Suggest next steps based on the document type and content
+
+RESPONSE STRUCTURE:
+📄 **Document Analysis:** [Analysis of the uploaded document in context of the query]
+
+⚖️ **Applicable Legal Sections:** [Relevant sections from BNS/BNSS/BSA and their applications]
+
+🔍 **Case Assessment:** [Assessment of the legal situation based on the document]
+
+📋 **Recommended Actions:** [Practical next steps and recommendations]
+
+💡 **Additional Considerations:** [Important legal considerations and warnings]
+
+Focus on providing practical, actionable legal guidance based on the specific document uploaded and the user's query.`
+            },
+            {
+              role: 'user',
+              content: `${conversationContext}UPLOADED DOCUMENT CONTENT (first 2000 characters):
+${document.content.substring(0, 2000)}
+
+USER QUERY: "${query}"
+
+RELEVANT LEGAL SECTIONS:
+${JSON.stringify(relevantSections.slice(0, 10), null, 2)}
+
+Please analyze this document and answer the user's query with specific reference to applicable legal sections and practical guidance.`
+            }
+          ],
+          max_tokens: 1500,
+          temperature: 0.1
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to process document query');
+      }
+
+      const data = await response.json();
+      return data.choices[0].message.content;
+
+    } catch (error) {
+      console.error('Error processing document query:', error);
+      return `I encountered an error while analyzing your document. However, I can see that you've uploaded a ${document.metadata.type} titled "${document.metadata.title}". Please try rephrasing your question or ask about specific aspects of the document.`;
+    }
+  };
+
   const clearConversation = () => {
     if (!currentConversation) return;
 
     const welcomeMessage: Message = {
       id: uuidv4(),
-      content: '⚖️ **Welcome to Legal Assistant!**\n\nI can help you with questions about Indian laws, particularly the Bharatiya Nyaya Sanhita (BNS) and Indian Penal Code (IPC). I can also answer general questions on any topic.\n\n**Examples of what you can ask:**\n- "What is section 1 about?"\n- "Tell me about definitions"\n "Show me section 2"\n- "What is murder under BNS?"\n- "Compare murder in BNS and IPC"\n- "Tell me about theft"\n- "Differences between BNS and IPC"\n\nI maintain conversation context, so you can ask follow-up questions that reference our previous discussion!\n\nPlease ask your question!',
+      content: '⚖️ **Welcome to Legal Assistant!**\n\nI can help you with questions about Indian laws, particularly the Bharatiya Nyaya Sanhita (BNS) and Indian Penal Code (IPC). I can also analyze uploaded legal documents like FIRs and complaints.\n\n**Examples of what you can ask:**\n- "What is section 1 about?"\n- "Tell me about definitions"\n- "What are the preliminary provisions?"\n- "What is murder under BNS?"\n- "Compare murder in BNS and IPC"\n- "Tell me about theft"\n- "Differences between BNS and IPC"\n\n**Document Analysis:**\n- Upload FIRs, complaints, or legal documents\n- Ask questions about uploaded documents\n- Get relevant legal sections for your case\n\nI maintain conversation context, so you can ask follow-up questions that reference our previous discussion!\n\nPlease ask your question or upload a document!',
       role: 'assistant',
       timestamp: new Date(),
     };
@@ -425,6 +562,9 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setConversations(conversations.map(conv =>
       conv.id === currentConversation.id ? resetConversation : conv
     ));
+    
+    // Clear current document when clearing conversation
+    setCurrentDocument(null);
   };
 
   return (
@@ -432,10 +572,13 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       value={{
         conversations,
         currentConversation,
+        currentDocument,
         loading,
         createConversation,
         sendMessage,
         clearConversation,
+        setCurrentDocument,
+        queryDocument,
       }}
     >
       {children}
