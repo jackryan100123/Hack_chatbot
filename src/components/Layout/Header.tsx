@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Shield, Menu, X } from 'lucide-react';
+import { Shield, Menu, X, FileText } from 'lucide-react';
 import { useLanguage } from '../../context/LanguageContext';
 import LanguageSelector from '../ui/LanguageSelector';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -30,6 +30,7 @@ const Header: React.FC = () => {
   const navLinks = [
     { name: t('nav.home'), path: '/' },
     { name: t('nav.chat'), path: '/chat' },
+    { name: t('nav.documentAnalysis'), path: '/document-analysis', icon: FileText },
     { name: t('nav.downloads'), path: '/downloads' },
     { name: t('nav.contact'), path: '/contact' },
   ];
@@ -58,13 +59,14 @@ const Header: React.FC = () => {
               <Link
                 key={link.path}
                 to={link.path}
-                className={`font-medium transition-colors ${
+                className={`font-medium transition-colors flex items-center space-x-1 ${
                   location.pathname === link.path
                     ? 'text-primary-600'
                     : 'text-neutral-700 hover:text-primary-600'
                 }`}
               >
-                {link.name}
+                {link.icon && <link.icon className="h-4 w-4" />}
+                <span>{link.name}</span>
               </Link>
             ))}
             <LanguageSelector />
@@ -100,13 +102,14 @@ const Header: React.FC = () => {
                 <Link
                   key={link.path}
                   to={link.path}
-                  className={`font-medium py-2 transition-colors ${
+                  className={`font-medium py-2 transition-colors flex items-center space-x-2 ${
                     location.pathname === link.path
                       ? 'text-primary-600'
                       : 'text-neutral-700'
                   }`}
                 >
-                  {link.name}
+                  {link.icon && <link.icon className="h-4 w-4" />}
+                  <span>{link.name}</span>
                 </Link>
               ))}
               <div className="pt-2 border-t border-neutral-200">

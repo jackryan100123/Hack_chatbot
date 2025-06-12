@@ -8,6 +8,9 @@ import bnss from '../data/laws/bnss.json';
 import bsa from '../data/laws/bsa.json';
 import crpc from '../data/laws/crpc.json';
 import iea from '../data/laws/iea.json';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 interface ProcessedDocument {
   id: string;
@@ -19,6 +22,7 @@ interface ProcessedDocument {
     caseNumber?: string;
     sections?: string[];
     keywords?: string[];
+    summary?: string;
   };
   fileName: string;
   fileSize: number;
@@ -35,6 +39,8 @@ interface ChatContextType {
   clearConversation: () => void;
   setCurrentDocument: (document: ProcessedDocument | null) => void;
   queryDocument: (query: string) => Promise<void>;
+  messages: Array<{ role: string; content: string }>;
+  setActiveDocument: (document: { id: string; name: string; content: string; summary: string }) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -353,88 +359,202 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const sendMessage = async (content: string) => {
-    if (!content.trim() || !currentConversation) return;
+    if (loading) return;
 
-    const userMessage: Message = {
+    console.log('Sending message:', content);
+    const newMessage: Message = {
       id: uuidv4(),
       content,
       role: 'user',
       timestamp: new Date(),
     };
 
-    const updatedConversation = {
-      ...currentConversation,
-      messages: [...currentConversation.messages, userMessage],
-      updatedAt: new Date(),
-    };
-
-    setCurrentConversation(updatedConversation);
-    setConversations(conversations.map(conv =>
-      conv.id === currentConversation.id ? updatedConversation : conv
-    ));
+    setLoading(true);
+    
+    // Update conversations with user message
+    setConversations((prev) =>
+      prev.map((conv) =>
+        conv.id === currentConversation?.id
+          ? { ...conv, messages: [...conv.messages, newMessage] }
+          : conv
+      )
+    );
 
     try {
-      setLoading(true);
-      
-      // Build conversation history for context (excluding the current user message)
-      const conversationHistory = buildConversationHistory(updatedConversation.messages.slice(0, -1));
-      
-      let responseContent: string;
-      
-      // If there's a current document, include it in the context
+      let aiResponseContent: string;
       if (currentDocument) {
-        responseContent = await processDocumentQuery(content, currentDocument, conversationHistory);
+        // If a document is uploaded, query the document
+        aiResponseContent = await processDocumentQuery(
+          content,
+          currentDocument,
+          buildConversationHistory(currentConversation?.messages || [])
+        );
       } else {
-        // Use the unified processing function with conversation context
-        responseContent = await processUnifiedQuery(content, searchSectionsByKeywords, conversationHistory);
+        // Otherwise, use the unified chat service
+        aiResponseContent = await processUnifiedQuery(
+          content,
+          searchSectionsByKeywords,
+          buildConversationHistory(currentConversation?.messages || [])
+        );
       }
 
-      const assistantMessage: Message = {
+      console.log('AI Response received:', aiResponseContent);
+
+      const aiMessage: Message = {
         id: uuidv4(),
-        content: responseContent,
+        content: aiResponseContent,
         role: 'assistant',
         timestamp: new Date(),
       };
 
-      const conversationWithResponse = {
-        ...updatedConversation,
-        messages: [...updatedConversation.messages, assistantMessage],
-        updatedAt: new Date(),
-      };
+      // Update conversations with AI response
+      setConversations((prev) =>
+        prev.map((conv) =>
+          conv.id === currentConversation?.id
+            ? { ...conv, messages: [...conv.messages, aiMessage] }
+            : conv
+        )
+      );
 
-      setCurrentConversation(conversationWithResponse);
-      setConversations(conversations.map(conv =>
-        conv.id === currentConversation.id ? conversationWithResponse : conv
-      ));
-      
+      // Update current conversation
+      setCurrentConversation((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          messages: [...prev.messages, aiMessage],
+          updatedAt: new Date(),
+        };
+      });
+
     } catch (error) {
-      console.error('Failed to process message:', error);
-
+      console.error('Error sending message:', error);
       const errorMessage: Message = {
         id: uuidv4(),
-        content: '❌ **System Error**\n\nSorry, there was an unexpected error processing your request. Please try again. If the problem persists, please contact support.',
+        content: 'I apologize, but I encountered an error. Please try again.',
         role: 'assistant',
         timestamp: new Date(),
       };
 
-      const conversationWithError = {
-        ...updatedConversation,
-        messages: [...updatedConversation.messages, errorMessage],
-        updatedAt: new Date(),
-      };
+      // Update conversations with error message
+      setConversations((prev) =>
+        prev.map((conv) =>
+          conv.id === currentConversation?.id
+            ? { ...conv, messages: [...conv.messages, errorMessage] }
+            : conv
+        )
+      );
 
-      setCurrentConversation(conversationWithError);
-      setConversations(conversations.map(conv =>
-        conv.id === currentConversation.id ? conversationWithError : conv
-      ));
+      // Update current conversation with error message
+      setCurrentConversation((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          messages: [...prev.messages, errorMessage],
+          updatedAt: new Date(),
+        };
+      });
     } finally {
       setLoading(false);
     }
   };
 
   const queryDocument = async (query: string) => {
-    if (!currentDocument) return;
-    await sendMessage(query);
+    console.log('Querying document:', { query, currentDocument });
+    if (!currentDocument) {
+      console.error('No document is currently active');
+      return;
+    }
+
+    // Create a user message for the query
+    const userMessage: Message = {
+      id: uuidv4(),
+      content: query,
+      role: 'user',
+      timestamp: new Date(),
+    };
+
+    // Update conversations with user message
+    setConversations((prev) =>
+      prev.map((conv) =>
+        conv.id === currentConversation?.id
+          ? { ...conv, messages: [...conv.messages, userMessage] }
+          : conv
+      )
+    );
+
+    // Update current conversation
+    setCurrentConversation((prev) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        messages: [...prev.messages, userMessage],
+        updatedAt: new Date(),
+      };
+    });
+
+    try {
+      const aiResponseContent = await processDocumentQuery(
+        query,
+        currentDocument,
+        buildConversationHistory(currentConversation?.messages || [])
+      );
+
+      console.log('Document query response received:', aiResponseContent);
+
+      const aiMessage: Message = {
+        id: uuidv4(),
+        content: aiResponseContent,
+        role: 'assistant',
+        timestamp: new Date(),
+      };
+
+      // Update conversations with AI response
+      setConversations((prev) =>
+        prev.map((conv) =>
+          conv.id === currentConversation?.id
+            ? { ...conv, messages: [...conv.messages, aiMessage] }
+            : conv
+        )
+      );
+
+      // Update current conversation
+      setCurrentConversation((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          messages: [...prev.messages, aiMessage],
+          updatedAt: new Date(),
+        };
+      });
+
+    } catch (error) {
+      console.error('Error querying document:', error);
+      const errorMessage: Message = {
+        id: uuidv4(),
+        content: 'I apologize, but I encountered an error while processing your question. Please try again.',
+        role: 'assistant',
+        timestamp: new Date(),
+      };
+
+      // Update conversations with error message
+      setConversations((prev) =>
+        prev.map((conv) =>
+          conv.id === currentConversation?.id
+            ? { ...conv, messages: [...conv.messages, errorMessage] }
+            : conv
+        )
+      );
+
+      // Update current conversation with error message
+      setCurrentConversation((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          messages: [...prev.messages, errorMessage],
+          updatedAt: new Date(),
+        };
+      });
+    }
   };
 
   const processDocumentQuery = async (
@@ -442,103 +562,54 @@ export const ChatProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     document: ProcessedDocument, 
     conversationHistory: Array<{role: string, content: string}>
   ): Promise<string> => {
-    const API_KEY = import.meta.env.VITE_GROQ_API_KEY;
-    
-    if (!API_KEY) {
-      return `Based on the uploaded document "${document.metadata.title}", I can see it's a ${document.metadata.type}. However, I need the GROQ API key to provide detailed analysis. Please check your environment configuration.`;
-    }
+    console.log('Processing document query:', { query, documentId: document.id });
+    if (!GEMINI_API_KEY) throw new Error('Gemini API key is not configured');
+
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+    const prompt = `You are an AI assistant specialized in analyzing legal documents and answering questions based on their content.
+
+Document Title: ${document.metadata.title}
+Document Type: ${document.metadata.type}
+Document Summary: ${document.metadata.summary || 'No summary available.'}
+
+Full Document Content:
+\`\`\`
+${document.content.substring(0, 2000)}
+\`\`\`
+
+User Query: "${query}"
+
+Based on the provided document content and the user's query, provide a detailed response that:
+1. Directly answers the user's question using information from the document
+2. References specific parts of the document when relevant
+3. Identifies any legal sections or provisions mentioned
+4. Provides context and explanation for legal terms or concepts
+5. If the query cannot be answered from the document, clearly state this and suggest what information might be needed
+
+Conversation history for context (latest first):
+${conversationHistory.slice(-3).map(msg => `${msg.role.toUpperCase()}: ${msg.content}`).join('\n')}`;
 
     try {
-      // Extract keywords from the document and query
-      const documentKeywords = [
-        ...(document.metadata.keywords || []),
-        ...(document.metadata.sections || []),
-        document.metadata.type,
-        ...(document.metadata.caseNumber ? [document.metadata.caseNumber] : [])
-      ];
-
-      // Search for relevant legal sections
-      const queryKeywords = query.toLowerCase().split(/\s+/).filter(word => word.length > 2);
-      const allKeywords = [...new Set([...documentKeywords, ...queryKeywords])];
-      const relevantSections = searchSectionsByKeywords(allKeywords);
-
-      // Build conversation context
-      const conversationContext = conversationHistory.length > 0 
-        ? `\n\nCONVERSATION HISTORY (for context):\n${conversationHistory.map(msg => `${msg.role.toUpperCase()}: ${msg.content}`).join('\n\n')}\n\n`
-        : '';
-
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${API_KEY}`,
-          'Content-Type': 'application/json',
+      console.log('Sending prompt to AI:', prompt.substring(0, 200) + '...');
+      const result = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          maxOutputTokens: 2000,
+          temperature: 0.7,
         },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: [
-            {
-              role: 'system',
-              content: `You are a specialized legal assistant analyzing uploaded legal documents in the context of Indian law.
-
-DOCUMENT CONTEXT:
-- Document Type: ${document.metadata.type}
-- Title: ${document.metadata.title}
-- Case Number: ${document.metadata.caseNumber || 'Not specified'}
-- Date: ${document.metadata.date || 'Not specified'}
-- Identified Sections: ${document.metadata.sections?.join(', ') || 'None identified'}
-- Keywords: ${document.metadata.keywords?.join(', ') || 'None identified'}
-
-LEGAL SECTIONS AVAILABLE:
-You have access to ${relevantSections.length} relevant legal sections from current laws (BNS, BNSS, BSA) and previous laws (IPC, CrPC, IEA).
-
-RESPONSE GUIDELINES:
-1. **Document Analysis**: Analyze the uploaded document in relation to the user's query
-2. **Legal Mapping**: Map document content to relevant legal sections
-3. **Practical Guidance**: Provide actionable legal advice based on the document
-4. **Section References**: Cite specific legal sections that apply to the document
-5. **Procedural Steps**: Suggest next steps based on the document type and content
-
-RESPONSE STRUCTURE:
-📄 **Document Analysis:** [Analysis of the uploaded document in context of the query]
-
-⚖️ **Applicable Legal Sections:** [Relevant sections from BNS/BNSS/BSA and their applications]
-
-🔍 **Case Assessment:** [Assessment of the legal situation based on the document]
-
-📋 **Recommended Actions:** [Practical next steps and recommendations]
-
-💡 **Additional Considerations:** [Important legal considerations and warnings]
-
-Focus on providing practical, actionable legal guidance based on the specific document uploaded and the user's query.`
-            },
-            {
-              role: 'user',
-              content: `${conversationContext}UPLOADED DOCUMENT CONTENT (first 2000 characters):
-${document.content.substring(0, 2000)}
-
-USER QUERY: "${query}"
-
-RELEVANT LEGAL SECTIONS:
-${JSON.stringify(relevantSections.slice(0, 10), null, 2)}
-
-Please analyze this document and answer the user's query with specific reference to applicable legal sections and practical guidance.`
-            }
-          ],
-          max_tokens: 1500,
-          temperature: 0.1
-        })
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to process document query');
+      const response = await result.response;
+      const text = response.text();
+      if (!text) {
+        throw new Error('Empty response from AI for document query.');
       }
-
-      const data = await response.json();
-      return data.choices[0].message.content;
-
+      console.log('Received AI response:', text.substring(0, 200) + '...');
+      return text;
     } catch (error) {
-      console.error('Error processing document query:', error);
-      return `I encountered an error while analyzing your document. However, I can see that you've uploaded a ${document.metadata.type} titled "${document.metadata.title}". Please try rephrasing your question or ask about specific aspects of the document.`;
+      console.error('Error querying document with AI:', error);
+      throw new Error('Failed to query document: ' + (error as Error).message);
     }
   };
 
@@ -567,6 +638,23 @@ Please analyze this document and answer the user's query with specific reference
     setCurrentDocument(null);
   };
 
+  const setActiveDocument = (document: { id: string; name: string; content: string; summary: string }) => {
+    console.log('Setting active document:', document);
+    const processedDoc: ProcessedDocument = {
+      id: document.id,
+      content: document.content,
+      metadata: {
+        type: 'legal_document',
+        title: document.name,
+        summary: document.summary
+      },
+      fileName: document.name,
+      fileSize: 0,
+      uploadedAt: new Date()
+    };
+    setCurrentDocument(processedDoc);
+  };
+
   return (
     <ChatContext.Provider
       value={{
@@ -579,6 +667,8 @@ Please analyze this document and answer the user's query with specific reference
         clearConversation,
         setCurrentDocument,
         queryDocument,
+        messages: currentConversation?.messages || [],
+        setActiveDocument,
       }}
     >
       {children}

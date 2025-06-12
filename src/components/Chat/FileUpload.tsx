@@ -1,8 +1,16 @@
 import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, File, X, AlertCircle, CheckCircle } from 'lucide-react';
+import { Upload, X, AlertCircle, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Button from '../ui/Button';
+import { useChat } from '../../context/ChatContext';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import * as pdfjs from 'pdfjs-dist';
+
+// Initialize PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.js',
+  import.meta.url
+).toString();
 
 interface FileUploadProps {
   onFileProcessed: (document: ProcessedDocument) => void;
@@ -21,11 +29,14 @@ interface ProcessedDocument {
     caseNumber?: string;
     sections?: string[];
     keywords?: string[];
+    summary?: string;
   };
   fileName: string;
   fileSize: number;
   uploadedAt: Date;
 }
+
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 const FileUpload: React.FC<FileUploadProps> = ({ 
   onFileProcessed, 
@@ -35,12 +46,15 @@ const FileUpload: React.FC<FileUploadProps> = ({
 }) => {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [currentStep, setCurrentStep] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   const processFile = async (file: File): Promise<ProcessedDocument> => {
     try {
+      console.log('Starting file processing:', { fileName: file.name, fileType: file.type });
       setUploading(true);
       setUploadProgress(10);
+      setCurrentStep('Validating file...');
 
       // Validate file type
       const allowedTypes = [
@@ -55,6 +69,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
       }
 
       setUploadProgress(30);
+      setCurrentStep('Extracting text...');
 
       // Extract text based on file type
       let extractedText = '';
@@ -67,12 +82,21 @@ const FileUpload: React.FC<FileUploadProps> = ({
         extractedText = await file.text();
       }
 
-      setUploadProgress(60);
+      if (!extractedText.trim()) {
+        throw new Error('No text content found in the document.');
+      }
+
+      console.log('Text extracted successfully:', { length: extractedText.length });
+
+      setUploadProgress(50);
+      setCurrentStep('Analyzing document...');
 
       // Analyze document content using AI
-      const analysis = await analyzeDocumentContent(extractedText);
+      const analysis = await analyzeDocumentContent(extractedText, file.name);
+      console.log('Document analysis complete:', analysis);
       
       setUploadProgress(90);
+      setCurrentStep('Finalizing...');
 
       const processedDocument: ProcessedDocument = {
         id: `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -83,106 +107,112 @@ const FileUpload: React.FC<FileUploadProps> = ({
         uploadedAt: new Date()
       };
 
+      console.log('Document processing complete:', processedDocument);
       setUploadProgress(100);
+      setCurrentStep('Complete!');
+      
       return processedDocument;
 
     } catch (error) {
       console.error('Error processing file:', error);
       throw error;
     } finally {
+      setTimeout(() => {
       setUploading(false);
       setUploadProgress(0);
+        setCurrentStep('');
+      }, 1000);
     }
   };
 
   const extractTextFromPDF = async (file: File): Promise<string> => {
-    // For now, we'll return a placeholder. In a real implementation,
-    // you would use a PDF parsing library like pdf-parse or PDF.js
-    return `[PDF Content from ${file.name}]\n\nThis is a placeholder for PDF text extraction. In a production environment, this would contain the actual extracted text from the PDF file.`;
-  };
-
-  const analyzeDocumentContent = async (text: string): Promise<ProcessedDocument['metadata']> => {
-    const API_KEY = import.meta.env.VITE_GROQ_API_KEY;
-    
-    if (!API_KEY) {
-      // Fallback analysis without AI
-      return {
-        type: 'other',
-        title: 'Uploaded Document',
-        keywords: extractBasicKeywords(text)
-      };
-    }
-
     try {
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
-          messages: [
-            {
-              role: 'system',
-              content: `You are a legal document analyzer specializing in Indian legal documents. Analyze the provided text and extract:
+      console.log('Starting PDF text extraction...');
+      const arrayBuffer = await file.arrayBuffer();
+      
+      // Use PDF.js directly with the array buffer
+      const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+      let fullText = '';
 
-1. Document type (complaint, fir, legal_document, or other)
-2. Document title/subject
-3. Case number (if any)
-4. Relevant legal sections mentioned (BNS, IPC, CrPC, etc.)
-5. Key legal terms and concepts
-6. Date (if mentioned)
-
-Return a JSON object with this structure:
-{
-  "type": "complaint|fir|legal_document|other",
-  "title": "document title or subject",
-  "date": "date if found",
-  "caseNumber": "case number if found",
-  "sections": ["section1", "section2"],
-  "keywords": ["keyword1", "keyword2"]
-}
-
-Focus on identifying:
-- FIR numbers, complaint numbers
-- Legal sections (IPC 302, BNS 103, etc.)
-- Crime types (murder, theft, assault, etc.)
-- Legal procedures mentioned
-- Parties involved (complainant, accused, etc.)`
-            },
-            {
-              role: 'user',
-              content: `Analyze this legal document:\n\n${text.substring(0, 3000)}` // Limit text to avoid token limits
-            }
-          ],
-          max_tokens: 500,
-          temperature: 0.1
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to analyze document');
+      // Extract text from each page
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .map((item: any) => item.str)
+          .join(' ');
+        fullText += pageText + '\n\n';
       }
 
-      const data = await response.json();
-      const analysis = JSON.parse(data.choices[0].message.content);
-      
-      return {
-        type: analysis.type || 'other',
-        title: analysis.title || 'Uploaded Document',
-        date: analysis.date,
-        caseNumber: analysis.caseNumber,
-        sections: analysis.sections || [],
-        keywords: analysis.keywords || extractBasicKeywords(text)
-      };
-
+      console.log('PDF text extraction complete:', { length: fullText.length });
+      return fullText;
     } catch (error) {
-      console.error('Error analyzing document with AI:', error);
+      console.error('Error extracting text from PDF:', error);
+      throw new Error('Failed to extract text from PDF file');
+    }
+  };
+
+  const analyzeDocumentContent = async (text: string, fileName: string): Promise<ProcessedDocument['metadata']> => {
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+
+    const prompt = `
+      Analyze this legal document and provide a comprehensive analysis. 
+
+      Document Content:
+      ${text}
+
+      Please provide a JSON response with the following structure:
+{
+        "type": "complaint" | "fir" | "legal_document" | "other",
+        "title": "descriptive title",
+        "date": "extracted date if found",
+  "caseNumber": "case number if found",
+        "sections": ["relevant legal sections mentioned"],
+        "keywords": ["important legal terms and concepts"],
+        "summary": "concise 2-3 sentence summary of the document"
+}
+
+      Focus on:
+      1. Identifying the document type accurately
+      2. Extracting key legal information
+      3. Summarizing the main points clearly
+      4. Identifying relevant legal sections or provisions mentioned
+    `;
+
+    try {
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const responseText = response.text();
+
+      // Try to parse JSON response
+      try {
+        const parsed = JSON.parse(responseText);
+        return {
+          type: parsed.type || 'other',
+          title: parsed.title || fileName,
+          date: parsed.date,
+          caseNumber: parsed.caseNumber,
+          sections: parsed.sections || [],
+          keywords: parsed.keywords || extractBasicKeywords(text),
+          summary: parsed.summary || 'Document analyzed successfully.'
+        };
+      } catch (parseError) {
+        // If JSON parsing fails, use the raw response as summary
+      return {
+          type: 'other',
+          title: fileName,
+          keywords: extractBasicKeywords(text),
+          summary: responseText || 'Document analyzed successfully.'
+      };
+      }
+    } catch (error) {
+      console.error('Error with AI analysis:', error);
       return {
         type: 'other',
-        title: 'Uploaded Document',
-        keywords: extractBasicKeywords(text)
+        title: fileName,
+        keywords: extractBasicKeywords(text),
+        summary: 'Document uploaded successfully. AI analysis temporarily unavailable.'
       };
     }
   };
@@ -191,25 +221,31 @@ Focus on identifying:
     const legalTerms = [
       'fir', 'complaint', 'accused', 'complainant', 'witness', 'evidence',
       'section', 'ipc', 'bns', 'crpc', 'bnss', 'murder', 'theft', 'assault',
-      'police', 'station', 'case', 'crime', 'investigation', 'arrest'
+      'police', 'station', 'case', 'crime', 'investigation', 'arrest',
+      'court', 'judge', 'bail', 'hearing', 'summons', 'warrant'
     ];
 
     const words = text.toLowerCase().split(/\s+/);
     return legalTerms.filter(term => 
       words.some(word => word.includes(term))
-    );
+    ).slice(0, 10); // Limit to 10 keywords
   };
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
 
     const file = acceptedFiles[0];
-    setUploadedFile(file);
+    console.log('File dropped:', { fileName: file.name, fileType: file.type });
+    setError(null);
 
     try {
       const processedDocument = await processFile(file);
+      console.log('File processed successfully, calling onFileProcessed');
       onFileProcessed(processedDocument);
     } catch (error) {
+      console.error('Error in onDrop:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      setError(errorMessage);
       onError(error as Error);
     }
   }, [onFileProcessed, onError]);
@@ -223,7 +259,8 @@ Focus on identifying:
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx']
     },
     maxFiles: 1,
-    maxSize: 10 * 1024 * 1024 // 10MB
+    maxSize: 10 * 1024 * 1024, // 10MB
+    disabled: uploading
   });
 
   if (!isVisible) return null;
@@ -250,7 +287,8 @@ Focus on identifying:
             </h3>
             <button
               onClick={onClose}
-              className="text-neutral-500 hover:text-neutral-700"
+              className="text-neutral-500 hover:text-neutral-700 disabled:opacity-50"
+              disabled={uploading}
             >
               <X className="h-5 w-5" />
             </button>
@@ -261,15 +299,15 @@ Focus on identifying:
               {...getRootProps()}
               className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
                 isDragActive
-                  ? 'border-primary-500 bg-primary-50'
-                  : 'border-neutral-300 hover:border-primary-400'
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-neutral-300 hover:border-blue-400'
               }`}
             >
               <input {...getInputProps()} />
               <Upload className="h-12 w-12 text-neutral-400 mx-auto mb-4" />
               
               {isDragActive ? (
-                <p className="text-primary-600 font-medium">
+                <p className="text-blue-600 font-medium">
                   Drop the file here...
                 </p>
               ) : (
@@ -285,11 +323,11 @@ Focus on identifying:
             </div>
           ) : (
             <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-              <p className="text-neutral-600 mb-2">Processing document...</p>
+              <Loader2 className="animate-spin h-12 w-12 text-blue-600 mx-auto mb-4" />
+              <p className="text-neutral-600 mb-2">{currentStep}</p>
               <div className="w-full bg-neutral-200 rounded-full h-2">
                 <div
-                  className="bg-primary-600 h-2 rounded-full transition-all duration-300"
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                   style={{ width: `${uploadProgress}%` }}
                 ></div>
               </div>
@@ -307,10 +345,27 @@ Focus on identifying:
                   <li>• Complaint letters and applications</li>
                   <li>• Legal notices and documents</li>
                   <li>• Court orders and judgments</li>
+                  <li>• Legal contracts and agreements</li>
                 </ul>
               </div>
             </div>
           </div>
+
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-4 p-3 bg-red-50 rounded-lg border border-red-200"
+            >
+              <div className="flex items-start">
+                <AlertCircle className="h-5 w-5 text-red-500 mr-2 mt-0.5" />
+                <div className="text-sm text-red-600">
+                  <p className="font-medium mb-1">Error:</p>
+                  <p>{error}</p>
+                </div>
+              </div>
+            </motion.div>
+          )}
         </motion.div>
       </motion.div>
     </AnimatePresence>

@@ -12,7 +12,7 @@ const Hero: React.FC = () => {
     <div className="relative bg-gradient-to-br from-primary-800 to-primary-900 text-white py-24 md:py-32">
       {/* Background pattern */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMwMDAiIGZpbGwtb3BhY2l0eT0iLjAyIj48cGF0aCBkPSJNMzYgMzRjMC0yLjIgMS44LTQgNC00czQgMS44IDQgNC0xLjggNC00IDQtNC0xLjgtNC00eiIvPjxwYXRoIGQ9Ik0zMCA0NGMwLTMuMyAyLjctNiA2LTZzNiAyLjcgNiA2LTIuNyA2LTYgNi02LTIuNy02LTZ6Ii8+PHBhdGggZD0iTTIwIjvPC9wYXRoPjwvZz48L2c+PC9zdmc+')] opacity-5"></div>
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMwMDAiIGZpbGwtb3BhY2l0eT0iLjA1Ij48cGF0aCBkPSJNMCAwSDYwVjYwSDBWMHpNMSAxSDU5VjU5SDFWMXpNOC43MyA3Ljk0bDIwLjI3IDIwLjI3LTEuMDYgMS4wNkw3LjY3IDguOTlaTTcuOTQgOC43M2w3Ljc3IDcuNzctMS4wNiAxLjA2LTYuNzEtNi43MVpNNjAgMEgwVjYwSDYwVjBWMHptLTUuOTIgMC40NWwtLjQ1IDUuNDctMi41OC0uMjMgNS40Ny01LjQ3WiIvPjwvZz48L2c+PC9zdmc+')] opacity-5"></div>
       </div>
       
       <div className="container mx-auto px-4 relative z-10">
@@ -64,22 +64,22 @@ const Hero: React.FC = () => {
                 <div className="h-3 w-3 rounded-full bg-accent-500 mr-2"></div>
                 <div className="h-3 w-3 rounded-full bg-yellow-500 mr-2"></div>
                 <div className="h-3 w-3 rounded-full bg-green-500 mr-2"></div>
-                <div className="flex-1 text-center text-white font-medium">Police Assistant</div>
+                <div className="flex-1 text-center text-white font-medium">Legal Assistant AI</div>
               </div>
               <div className="p-6 bg-neutral-50">
                 <div className="flex justify-start mb-4">
                   <div className="bg-primary-100 rounded-lg rounded-tl-none p-3 max-w-[80%]">
-                    <p className="text-neutral-800">Welcome to Police Assistant! How can I help you today?</p>
+                    <p className="text-neutral-800">Hello! How can I assist you with Indian law today?</p>
                   </div>
                 </div>
                 <div className="flex justify-end mb-4">
                   <div className="bg-primary-600 text-white rounded-lg rounded-tr-none p-3 max-w-[80%]">
-                    <p>What is section 43 of BNS?</p>
+                    <p>What are the new provisions for murder under BNS?</p>
                   </div>
                 </div>
                 <div className="flex justify-start">
                   <div className="bg-primary-100 rounded-lg rounded-tl-none p-3 max-w-[80%] animate-pulse">
-                    <p className="text-neutral-800">Section 43 of Bharatiya Nyaya Sanhita (BNS) deals with...</p>
+                    <p className="text-neutral-800">Section 101 of Bharatiya Nyaya Sanhita (BNS) defines murder...</p>
                   </div>
                 </div>
               </div>

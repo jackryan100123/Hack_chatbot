@@ -1,11 +1,13 @@
 {
   "app": {
-    "name": "Police Assistant",
+    "name": "AI Assistant",
+    "description": "Your intelligent AI companion",
     "tagline": "Your Virtual Legal Companion"
   },
   "nav": {
     "home": "Home",
     "chat": "Chat",
+    "documentAnalysis": "Document Analysis",
     "downloads": "Downloads",
     "contact": "Contact"
   },
@@ -56,18 +58,20 @@
     }
   },
   "downloads": {
-    "title": "Legal Resources",
-    "subtitle": "Download important legal documents and forms",
+    "title": "Download Legal Resources",
+    "subtitle": "Access a comprehensive collection of legal acts, standard operating procedures, and essential forms.",
+    "search": "Search by title or description...",
     "categories": {
       "all": "All",
       "bns": "BNS",
       "bnss": "BNSS",
       "bsa": "BSA",
-      "other": "Other Resources"
+      "sop": "SOP",
+      "forms": "Forms",
+      "punjabi": "Punjabi"
     },
-    "search": "Search resources...",
     "downloadBtn": "Download",
-    "noResults": "No documents found matching your search criteria."
+    "noResults": "No legal resources found matching your criteria."
   },
   "contact": {
     "title": "Contact Us",

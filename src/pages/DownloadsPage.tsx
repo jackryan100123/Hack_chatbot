@@ -5,7 +5,7 @@ import { LawBooklet } from '../types';
 import lawBooklets from '../data/lawBooklets';
 import DownloadCard from '../components/Downloads/DownloadCard';
 
-type Category = 'ALL' | 'BNS' | 'BNSS' | 'BSA' | 'OTHER';
+type Category = 'ALL' | 'BNS' | 'BNSS' | 'BSA' | 'SOP' | 'FORMS';
 
 const DownloadsPage: React.FC = () => {
   const { t } = useTranslation();
@@ -27,7 +27,8 @@ const DownloadsPage: React.FC = () => {
     { value: 'BNS', label: t('downloads.categories.bns') },
     { value: 'BNSS', label: t('downloads.categories.bnss') },
     { value: 'BSA', label: t('downloads.categories.bsa') },
-    { value: 'OTHER', label: t('downloads.categories.other') },
+    { value: 'SOP', label: t('downloads.categories.sop') },
+    { value: 'FORMS', label: t('downloads.categories.forms') },
   ];
 
   return (

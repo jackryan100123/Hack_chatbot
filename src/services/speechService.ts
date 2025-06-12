@@ -87,11 +87,12 @@ export class SpeechService {
   private onErrorCallback: ((error: any) => void) | null = null;
 
   constructor() {
-    if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
-      this.recognition = new (window as any).webkitSpeechRecognition();
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (typeof window !== 'undefined' && typeof SpeechRecognition === 'function') {
+      this.recognition = new SpeechRecognition();
       this.setupRecognition();
     } else {
-      console.error('Speech recognition not supported in this browser');
+      console.error('Speech recognition not supported in this browser or environment');
     }
   }
 
@@ -198,69 +199,26 @@ Output the language code only: 'hindi', 'punjabi', 'telugu', 'malayalam', or 'en
       return response.data.choices[0].message.content.trim().toLowerCase();
     } catch (error) {
       console.error('Error detecting language:', error);
-      return 'english';
+      return 'english'; // Fallback to English on error
     }
   }
 
   private async convertToScript(text: string, language: string): Promise<string> {
-    if (language === 'english') return text;
+    // If language is English or script conversion is not defined, return original text
+    if (language === 'english' || !SCRIPT_CONVERSION[language as keyof typeof SCRIPT_CONVERSION]) {
+      return text;
+    }
 
-    const scriptMap = SCRIPT_CONVERSION[language as keyof typeof SCRIPT_CONVERSION];
-    if (!scriptMap) return text;
-
-    // First, handle common words and phrases
-    const commonPhrases = {
-      malayalam: {
-        'namaskaram': 'നമസ്കാരം',
-        'sukhamano': 'സുഖമാണോ',
-        'vanakkam': 'വണക്കം',
-        'nanni': 'നന്ദി',
-        'kollam': 'കൊള്ളാം',
-        'poyi': 'പോയി',
-        'varu': 'വരു'
-      },
-      punjabi: {
-        'sat sri akal': 'ਸਤ ਸ੍ਰੀ ਅਕਾਲ',
-        'ki haal': 'ਕੀ ਹਾਲ',
-        'theek': 'ਠੀਕ',
-        'changa': 'ਚੰਗਾ',
-        'dhanyavaad': 'ਧੰਨਵਾਦ',
-        'kiddan': 'ਕਿਦਾਂ'
-      },
-      telugu: {
-        'namaskaram': 'నమస్కారం',
-        'bagunnara': 'బాగున్నారా',
-        'dhanyavaadham': 'ధన్యవాదాలు',
-        'emundi': 'ఏముంది',
-        'ela': 'ఎలా',
-        'eppudu': 'ఎప్పుడు'
-      },
-      hindi: {
-        'namaste': 'नमस्ते',
-        'dhanyavaad': 'धन्यवाद',
-        'kaise': 'कैसे',
-        'kya': 'क्या',
-        'kab': 'कब',
-        'kahan': 'कहाँ',
-        'kyon': 'क्यों'
-      }
-    };
-
-    // Convert common phrases first
+    const mapping = SCRIPT_CONVERSION[language as keyof typeof SCRIPT_CONVERSION];
     let convertedText = text;
-    const phrases = commonPhrases[language as keyof typeof commonPhrases];
-    if (phrases) {
-      for (const [roman, script] of Object.entries(phrases)) {
-        const regex = new RegExp(roman, 'gi');
-        convertedText = convertedText.replace(regex, script);
-      }
-    }
 
-    // Then convert individual characters
-    for (const [roman, script] of Object.entries(scriptMap)) {
-      const regex = new RegExp(roman, 'gi');
-      convertedText = convertedText.replace(regex, script);
-    }
+    // Sort keys by length in descending order to match longer phrases first
+    const sortedKeys = Object.keys(mapping).sort((a, b) => b.length - a.length);
+
+    sortedKeys.forEach(romanChar => {
+      const regex = new RegExp(romanChar, 'g');
+      convertedText = convertedText.replace(regex, mapping[romanChar as keyof typeof mapping]);
+    });
 
     return convertedText;
   }
@@ -270,26 +228,28 @@ Output the language code only: 'hindi', 'punjabi', 'telugu', 'malayalam', or 'en
     onError: (error: any) => void
   ) {
     if (!this.recognition) {
-      onError(new Error('Speech recognition not supported'));
+      onError('Speech recognition not supported');
       return;
     }
 
     this.onResultCallback = onResult;
     this.onErrorCallback = onError;
-    this.isListening = true;
+
     this.recognition.start();
+    this.isListening = true;
   }
 
   public stopListening() {
-    if (this.recognition && this.isListening) {
+    if (this.recognition) {
       this.recognition.stop();
       this.isListening = false;
-      this.onResultCallback = null;
-      this.onErrorCallback = null;
     }
   }
 
   public isSupported(): boolean {
-    return !!this.recognition;
+    return typeof window !== 'undefined' && (
+      typeof (window as any).SpeechRecognition === 'function' ||
+      typeof (window as any).webkitSpeechRecognition === 'function'
+    );
   }
 }

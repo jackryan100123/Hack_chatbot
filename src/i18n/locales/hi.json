@@ -1,11 +1,13 @@
 {
   "app": {
-    "name": "पुलिस सहायक",
+    "name": "AI Assistant",
+    "description": "आपका बुद्धिमान AI साथी",
     "tagline": "आपका आभासी कानूनी साथी"
   },
   "nav": {
     "home": "होम",
     "chat": "चैट",
+    "documentAnalysis": "दस्तावेज़ विश्लेषण",
     "downloads": "डाउनलोड",
     "contact": "संपर्क"
   },
@@ -63,7 +65,9 @@
       "bns": "BNS",
       "bnss": "BNSS",
       "bsa": "BSA",
-      "other": "अन्य संसाधन"
+      "sop": "एसओपी",
+      "forms": "फॉर्म",
+      "punjabi": "ਪੰਜਾਬੀ"
     },
     "search": "संसाधन खोजें...",
     "downloadBtn": "डाउनलोड",

@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, Download, File } from 'lucide-react';
+import { FileText, Download, File, FolderOpen, ScrollText } from 'lucide-react';
 import { LawBooklet } from '../../types';
 import Card from '../ui/Card';
 import Button from '../ui/Button';
@@ -20,6 +20,10 @@ const DownloadCard: React.FC<DownloadCardProps> = ({ booklet }) => {
         return <FileText className="h-10 w-10 text-secondary-600" />;
       case 'BSA':
         return <FileText className="h-10 w-10 text-accent-600" />;
+      case 'SOP':
+        return <ScrollText className="h-10 w-10 text-yellow-600" />;
+      case 'FORMS':
+        return <FolderOpen className="h-10 w-10 text-purple-600" />;
       default:
         return <File className="h-10 w-10 text-neutral-600" />;
     }
@@ -33,13 +37,28 @@ const DownloadCard: React.FC<DownloadCardProps> = ({ booklet }) => {
         return 'bg-secondary-100 text-secondary-800';
       case 'BSA':
         return 'bg-accent-100 text-accent-800';
+      case 'SOP':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'FORMS':
+        return 'bg-purple-100 text-purple-800';
       default:
         return 'bg-neutral-100 text-neutral-800';
     }
   };
 
   const handleDownload = () => {
-    const fileUrl = `/downloads/${booklet.category.toLowerCase()}/${booklet.filename}`;
+    let fileUrl = '';
+    switch (booklet.category) {
+      case 'SOP':
+        fileUrl = `/downloads/SOP/${booklet.filename}`;
+        break;
+      case 'FORMS':
+        fileUrl = `/downloads/Forms/${booklet.filename}`;
+        break;
+      default:
+        fileUrl = `/downloads/${booklet.category.toLowerCase()}/${booklet.filename}`;
+        break;
+    }
     
     // Create a temporary anchor element
     const link = document.createElement('a');

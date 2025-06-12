@@ -6,6 +6,7 @@ import Button from '../ui/Button';
 import ChatMessage from './ChatMessage';
 import FileUpload from './FileUpload';
 import DocumentViewer from './DocumentViewer';
+import TypingIndicator from './TypingIndicator';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SpeechService } from '../../services/speechService';
 
@@ -113,7 +114,7 @@ const ChatInterface: React.FC = () => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [currentConversation?.messages]);
+  }, [currentConversation?.messages, loading]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -122,10 +123,14 @@ const ChatInterface: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!inputValue.trim()) return;
+    if (!inputValue.trim() || loading) return;
 
-    await sendMessage(inputValue);
-    setInputValue('');
+    try {
+      await sendMessage(inputValue);
+      setInputValue('');
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
   };
 
   const toggleListening = async () => {
@@ -156,7 +161,24 @@ const ChatInterface: React.FC = () => {
     }
   };
 
+  const handleQueryDocument = async (query: string) => {
+    console.log('Handling document query:', { query, currentDocument });
+    if (!currentDocument) {
+      console.error('No document is currently active');
+      return;
+    }
+    
+    setInputValue(query);
+    try {
+      await queryDocument(query);
+    } catch (error) {
+      console.error('Error querying document:', error);
+      await sendMessage('I apologize, but I encountered an error while processing your question. Please try again.');
+    }
+  };
+
   const handleDocumentProcessed = async (document: ProcessedDocument) => {
+    console.log('Document processed:', document);
     setShowFileUpload(false);
     setCurrentDocument(document);
     
@@ -170,7 +192,11 @@ const ChatInterface: React.FC = () => {
         `**Legal Sections Found:** ${document.metadata.sections.join(', ')}\n` : '') +
       `\nYou can now ask questions about this document and I'll provide relevant legal analysis and applicable sections.`;
     
-    await sendMessage(message);
+    try {
+      await sendMessage(message);
+    } catch (error) {
+      console.error('Error sending document processed message:', error);
+    }
   };
 
   const handleFileError = (error: Error) => {
@@ -188,10 +214,6 @@ const ChatInterface: React.FC = () => {
 
   const handleRemoveDocument = () => {
     setCurrentDocument(null);
-  };
-
-  const handleQueryDocument = (query: string) => {
-    setInputValue(query);
   };
 
   return (
@@ -240,33 +262,28 @@ const ChatInterface: React.FC = () => {
 
       {/* Messages Container */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {currentConversation?.messages.map((message) => (
+          <ChatMessage
+            key={message.id}
+            message={message}
+            isLoading={loading && message === currentConversation.messages[currentConversation.messages.length - 1]}
+          />
+        ))}
         <AnimatePresence>
-          {currentConversation?.messages.map((message) => (
+          {loading && (
             <motion.div
-              key={message.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.3 }}
+              exit={{ opacity: 0, y: 10 }}
             >
-              <ChatMessage message={message} />
+              <TypingIndicator />
             </motion.div>
-          ))}
+          )}
         </AnimatePresence>
-
-        {/* If no messages, show example questions */}
-        {(!currentConversation || currentConversation.messages.length <= 1) && (
-          <div className="mt-6">
-            <h3 className="text-center text-neutral-600 font-medium mb-4">
-              {t('chat.examples.title')}
-            </h3>
-          </div>
-        )}
-
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Container */}
+      {/* Input Area */}
       <div className="border-t border-neutral-200 p-4 bg-white">
         <form onSubmit={handleSubmit} className="flex space-x-2">
           <textarea
@@ -306,13 +323,6 @@ const ChatInterface: React.FC = () => {
             </Button>
           </div>
         </form>
-        
-        {/* Show warning if speech recognition is not supported */}
-        {!isSpeechSupported && (
-          <p className="text-sm text-neutral-500 mt-2 text-center">
-            Speech recognition is not supported in this browser. Try Chrome, Edge, or Safari.
-          </p>
-        )}
       </div>
 
       {/* File Upload Modal */}

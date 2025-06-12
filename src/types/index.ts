@@ -36,7 +36,7 @@ export interface LawBooklet {
   filename: string;
   fileSize: string;
   fileType: string;
-  category: 'BNS' | 'BNSS' | 'BSA' | 'OTHER';
+  category: 'BNS' | 'BNSS' | 'BSA' | 'SOP' | 'FORMS';
   language: string;
 }
 
