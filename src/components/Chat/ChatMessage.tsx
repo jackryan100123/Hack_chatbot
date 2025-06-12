@@ -1,6 +1,6 @@
 import React from 'react';
 import { Message } from '../../types';
-import { Shield, User } from 'lucide-react';
+import { Scale, User } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface ChatMessageProps {
@@ -18,7 +18,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
     // Replace URLs with anchor tags
     formatted = formatted.replace(
       /(https?:\/\/[^\s]+)/g,
-      '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-primary-600 hover:underline">$1</a>'
+      '<a href="$1" target="_blank" rel="noopener noreferrer" class="text-amber-600 hover:underline">$1</a>'
     );
     
     // Replace bullet points
@@ -38,35 +38,43 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
       }`}
     >
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className={`flex max-w-[80%] ${
+        initial={{ opacity: 0, y: 20, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
+        className={`flex max-w-[85%] ${
           isUser
-            ? 'bg-primary-600 text-white rounded-tl-lg rounded-tr-lg rounded-bl-lg'
-            : 'bg-white border border-neutral-200 rounded-tl-lg rounded-tr-lg rounded-br-lg'
-        } p-3 shadow-sm`}
+            ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-2xl rounded-tr-md shadow-lg'
+            : 'bg-white border-2 border-amber-100 rounded-2xl rounded-tl-md shadow-lg'
+        } p-4 relative`}
       >
         <div className="flex-shrink-0 mr-3">
           {isUser ? (
-            <div className="bg-white bg-opacity-20 p-1.5 rounded-full">
+            <div className="bg-white/20 p-2 rounded-full backdrop-blur-sm">
               <User className="h-5 w-5" />
             </div>
           ) : (
-            <div className="bg-primary-100 p-1.5 rounded-full">
-              <Shield className="h-5 w-5 text-primary-700" />
+            <div className="bg-gradient-to-r from-amber-100 to-orange-100 p-2 rounded-full border border-amber-200">
+              <Scale className="h-5 w-5 text-amber-600" />
             </div>
           )}
         </div>
         <div className="flex-1">
+          {!isUser && (
+            <div className="flex items-center space-x-2 mb-2">
+              <span className="text-xs font-semibold text-amber-700 bg-amber-100 px-2 py-1 rounded-full">
+                KanoonSarthi-AI
+              </span>
+            </div>
+          )}
           <div
-            className={`text-sm ${
-              isUser ? 'text-white' : 'text-neutral-800'
+            className={`text-sm leading-relaxed ${
+              isUser ? 'text-white' : 'text-gray-800'
             }`}
             dangerouslySetInnerHTML={{ __html: formatMessage(message.content) }}
           />
           <div
-            className={`text-xs mt-1 ${
-              isUser ? 'text-primary-200' : 'text-neutral-500'
+            className={`text-xs mt-2 ${
+              isUser ? 'text-amber-100' : 'text-gray-500'
             }`}
           >
             {message.timestamp.toLocaleTimeString([], { 
@@ -74,6 +82,19 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
               minute: '2-digit' 
             })}
           </div>
+        </div>
+        
+        {/* Message tail */}
+        <div className={`absolute bottom-0 ${
+          isUser 
+            ? 'right-0 transform translate-x-1 translate-y-1' 
+            : 'left-0 transform -translate-x-1 translate-y-1'
+        }`}>
+          <div className={`w-0 h-0 ${
+            isUser
+              ? 'border-l-[12px] border-l-orange-600 border-t-[12px] border-t-transparent'
+              : 'border-r-[12px] border-r-white border-t-[12px] border-t-transparent'
+          }`}></div>
         </div>
       </motion.div>
     </div>

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Send, Loader2, MessageSquare, Bot, User, Globe } from 'lucide-react';
+import { Send, Loader2, MessageSquare, Scale, User, Globe, Sparkles } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 interface DocumentQueryProps {
@@ -54,7 +54,7 @@ const DocumentQuery: React.FC<DocumentQueryProps> = ({ documentText }) => {
         ? 'कृपया अपना उत्तर हिंदी में दें।'
         : 'ਕਿਰਪਾ ਕਰਕੇ ਆਪਣਾ ਜਵਾਬ ਪੰਜਾਬੀ ਵਿੱਚ ਦਿਓ।';
 
-      const prompt = `You are a legal expert assistant. Based on the following document content and your knowledge of relevant laws, please provide a comprehensive answer to this question: ${userMessage}
+      const prompt = `You are KanoonSarthi-AI, an expert legal assistant specializing in Indian law. Based on the following document content and your knowledge of relevant laws, please provide a comprehensive answer to this question: ${userMessage}
 
 Document content:
 ${documentText}
@@ -90,99 +90,127 @@ Please provide a well-structured response that combines document analysis with l
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+      className="bg-gradient-to-br from-white to-amber-50 rounded-2xl shadow-xl border-2 border-amber-100 p-8 relative overflow-hidden"
     >
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-3">
-          <div className="bg-blue-50 p-2 rounded-lg">
-            <MessageSquare className="h-6 w-6 text-blue-500" />
-          </div>
-          <h2 className="text-xl font-semibold text-gray-900">Ask Questions</h2>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Globe className="h-5 w-5 text-gray-400" />
-          <select
-            value={selectedLanguage}
-            onChange={(e) => setSelectedLanguage(e.target.value as Language)}
-            className="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-2"
-          >
-            {Object.entries(languageLabels).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-      
-      <div className="space-y-4 mb-4 max-h-[500px] overflow-y-auto pr-2">
-        {messages.map((message, index) => (
-          <motion.div
-            key={index}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div
-              className={`max-w-[80%] rounded-2xl p-4 ${
-                message.role === 'user'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-50 text-gray-900 border border-gray-100'
-              }`}
-            >
-              <div className="flex items-center space-x-2 mb-2">
-                {message.role === 'user' ? (
-                  <User className="h-4 w-4" />
-                ) : (
-                  <Bot className="h-4 w-4 text-blue-500" />
-                )}
-                <span className="text-xs font-medium">
-                  {message.role === 'user' ? 'You' : 'Legal Assistant'}
-                </span>
-              </div>
-              <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
-            </div>
-          </motion.div>
-        ))}
-        {isLoading && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex justify-start"
-          >
-            <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
-              <div className="flex items-center space-x-2">
-                <Bot className="h-4 w-4 text-blue-500" />
-                <span className="text-xs font-medium">Legal Assistant</span>
-              </div>
-              <div className="mt-2">
-                <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
-              </div>
-            </div>
-          </motion.div>
-        )}
-        <div ref={messagesEndRef} />
+      {/* Background Pattern */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iYSIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIj48cGF0aCBkPSJtMCAwaDYwdjYwaC02MHoiIGZpbGw9Im5vbmUiLz48cGF0aCBkPSJtMCA2MGg2MG0tMzAtNjB2NjAiIHN0cm9rZT0iI2Y1OWUwYiIgc3Ryb2tlLXdpZHRoPSIxIiBvcGFjaXR5PSIuMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBmaWxsPSJ1cmwoI2EpIi8+PC9zdmc+')]"></div>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex space-x-2">
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={`Ask a question about the document... (${languageLabels[selectedLanguage]})`}
-          className="flex-1 rounded-xl border border-gray-300 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          disabled={isLoading}
-        />
-        <button
-          type="submit"
-          disabled={isLoading || !query.trim()}
-          className="bg-blue-500 text-white rounded-xl px-4 py-3 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          <Send className="h-5 w-5" />
-        </button>
-      </form>
+      {/* Floating Elements */}
+      <motion.div
+        animate={{ y: [-5, 5, -5] }}
+        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute top-4 right-4"
+      >
+        <Sparkles className="h-6 w-6 text-amber-400" />
+      </motion.div>
+
+      <div className="relative">
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center space-x-4">
+            <div className="bg-gradient-to-r from-amber-500 to-orange-600 p-3 rounded-full">
+              <MessageSquare className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Ask Legal Questions</h2>
+              <p className="text-amber-700">Get AI-powered answers about your document</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-3">
+            <Globe className="h-5 w-5 text-amber-600" />
+            <select
+              value={selectedLanguage}
+              onChange={(e) => setSelectedLanguage(e.target.value as Language)}
+              className="bg-white border-2 border-amber-200 text-amber-800 text-sm rounded-xl focus:ring-amber-500 focus:border-amber-500 px-3 py-2 font-medium"
+            >
+              {Object.entries(languageLabels).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        
+        <div className="space-y-4 mb-6 max-h-[500px] overflow-y-auto bg-gradient-to-b from-amber-50/50 to-white rounded-xl p-4 border border-amber-200">
+          {messages.length === 0 && (
+            <div className="text-center py-8">
+              <Scale className="h-12 w-12 text-amber-400 mx-auto mb-4" />
+              <p className="text-gray-600">Ask questions about your legal document to get detailed analysis and relevant legal insights.</p>
+            </div>
+          )}
+          
+          {messages.map((message, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+            >
+              <div
+                className={`max-w-[85%] rounded-2xl p-4 ${
+                  message.role === 'user'
+                    ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-tr-md'
+                    : 'bg-white border-2 border-amber-100 text-gray-900 rounded-tl-md shadow-sm'
+                }`}
+              >
+                <div className="flex items-center space-x-2 mb-2">
+                  {message.role === 'user' ? (
+                    <User className="h-4 w-4" />
+                  ) : (
+                    <Scale className="h-4 w-4 text-amber-600" />
+                  )}
+                  <span className="text-xs font-semibold">
+                    {message.role === 'user' ? 'You' : 'KanoonSarthi-AI'}
+                  </span>
+                </div>
+                <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
+              </div>
+            </motion.div>
+          ))}
+          
+          {isLoading && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex justify-start"
+            >
+              <div className="bg-white border-2 border-amber-100 rounded-2xl rounded-tl-md p-4 shadow-sm">
+                <div className="flex items-center space-x-2 mb-2">
+                  <Scale className="h-4 w-4 text-amber-600" />
+                  <span className="text-xs font-semibold text-amber-700">KanoonSarthi-AI</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Loader2 className="h-5 w-5 animate-spin text-amber-600" />
+                  <span className="text-sm text-gray-600">Analyzing your question...</span>
+                </div>
+              </div>
+            </motion.div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex space-x-3">
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={`Ask a question about the document... (${languageLabels[selectedLanguage]})`}
+            className="flex-1 rounded-xl border-2 border-amber-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent bg-white/80 backdrop-blur-sm transition-all duration-200"
+            disabled={isLoading}
+          />
+          <button
+            type="submit"
+            disabled={isLoading || !query.trim()}
+            className="bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-xl px-6 py-3 hover:from-amber-600 hover:to-orange-700 focus:outline-none focus:ring-2 focus:ring-amber-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+          >
+            <Send className="h-5 w-5" />
+          </button>
+        </form>
+      </div>
     </motion.div>
   );
 };
 
-export default DocumentQuery; 
+export default DocumentQuery;

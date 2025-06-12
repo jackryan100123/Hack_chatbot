@@ -1,8 +1,8 @@
 {
   "app": {
-    "name": "AI Assistant",
-    "description": "Your intelligent AI companion",
-    "tagline": "Your Virtual Legal Companion"
+    "name": "KanoonSarthi-AI",
+    "description": "Your intelligent legal companion",
+    "tagline": "Legal. Knowledge. At your command."
   },
   "nav": {
     "home": "Home",
@@ -13,87 +13,87 @@
   },
   "home": {
     "hero": {
-      "title": "Police Assistant Chatbot",
-      "subtitle": "Instant access to legal information, departmental forms, and SOPs",
-      "cta": "Start Conversation"
+      "title": "KanoonSarthi-AI",
+      "subtitle": "Your intelligent legal companion powered by AI. Get instant access to Indian legal information, analyze documents, and navigate the complexities of law with confidence.",
+      "cta": "Start Legal Consultation"
     },
     "features": {
-      "title": "Key Features",
+      "title": "Comprehensive Legal Solutions",
       "search": {
-        "title": "Search Legal Codes",
-        "description": "Instantly search through BNS, BNSS, and BSA legal codes with AI-powered accuracy"
+        "title": "Smart Legal Search",
+        "description": "AI-powered search through BNS, BNSS, BSA and legacy codes with contextual understanding"
       },
       "voice": {
         "title": "Voice Recognition",
-        "description": "Ask questions hands-free using voice commands while on duty"
+        "description": "Speak your legal queries naturally in multiple Indian languages"
       },
       "multilingual": {
         "title": "Multilingual Support",
-        "description": "Get assistance in multiple languages for broader accessibility"
+        "description": "Access legal information in Hindi, English, and regional languages"
       },
       "downloads": {
         "title": "Legal Resources",
-        "description": "Access and download essential legal documents and forms"
+        "description": "Download essential legal documents, forms, and procedural guides"
       }
     },
     "about": {
-      "title": "About Police Assistant",
-      "description": "Police Assistant is an AI-powered chatbot designed specifically for law enforcement personnel. It provides instant access to legal sections, departmental forms, and Standard Operating Procedures (SOPs) in multiple languages. The assistant helps officers quickly find relevant information, improving efficiency and ensuring accurate legal references."
+      "title": "About KanoonSarthi-AI",
+      "description": "KanoonSarthi-AI is an advanced AI-powered legal assistant designed specifically for the Indian legal system. Built with cutting-edge technology, it provides instant access to legal codes, case analysis, and procedural guidance. Whether you're a legal professional, law enforcement officer, or citizen seeking legal clarity, KanoonSarthi-AI is your trusted companion in navigating India's legal landscape."
     }
   },
   "chat": {
-    "placeholder": "Type your question here...",
+    "placeholder": "Ask your legal question here...",
     "send": "Send",
     "voice": "Use voice",
     "listening": "Listening...",
-    "welcome": "Welcome to Police Assistant! I can help you with legal information, forms, and SOPs. How can I assist you today?",
+    "welcome": "🙏 Welcome to KanoonSarthi-AI! I'm your intelligent legal companion, ready to assist you with Indian law queries, document analysis, and legal guidance. How may I help you today?",
     "examples": {
       "title": "Try asking:",
       "questions": [
         "What is section 302 of BNS?",
-        "Tell me about cybercrime reporting",
-        "What are the traffic penalties for drunk driving?",
-        "How to file an FIR?"
+        "Explain cybercrime laws in India",
+        "What are the penalties for traffic violations?",
+        "How to file an FIR online?"
       ]
     }
   },
   "downloads": {
-    "title": "Download Legal Resources",
-    "subtitle": "Access a comprehensive collection of legal acts, standard operating procedures, and essential forms.",
-    "search": "Search by title or description...",
+    "title": "Legal Resource Library",
+    "subtitle": "Access comprehensive collection of Indian legal documents, acts, and procedural guides",
+    "search": "Search legal resources...",
     "categories": {
-      "all": "All",
+      "all": "All Resources",
       "bns": "BNS",
       "bnss": "BNSS",
       "bsa": "BSA",
-      "sop": "SOP",
-      "forms": "Forms",
-      "punjabi": "Punjabi"
+      "sop": "SOPs",
+      "forms": "Legal Forms",
+      "punjabi": "ਪੰਜਾਬੀ"
     },
     "downloadBtn": "Download",
     "noResults": "No legal resources found matching your criteria."
   },
   "contact": {
-    "title": "Contact Us",
-    "subtitle": "Get in touch with our support team",
+    "title": "Contact Legal Support",
+    "subtitle": "Get in touch with our legal assistance team",
     "form": {
       "name": "Your Name",
       "email": "Email Address",
       "subject": "Subject",
-      "message": "Your Message",
+      "message": "Your Legal Query",
       "submit": "Send Message",
       "success": "Your message has been sent successfully!",
       "error": "There was an error sending your message. Please try again."
     },
     "emergency": {
-      "title": "Emergency Helplines",
-      "description": "For immediate assistance, contact these emergency numbers:"
+      "title": "Emergency Legal Helplines",
+      "description": "For immediate legal assistance, contact these emergency numbers:"
     }
   },
   "footer": {
     "rights": "All Rights Reserved",
-    "disclaimer": "This is an official service for police personnel.",
+    "disclaimer": "This is an AI-powered legal assistance service. For official legal advice, consult qualified legal professionals.",
     "privacy": "Privacy Policy",
-    "terms": "Terms of Use"
+    "terms": "Terms of Service"
   }
 }

@@ -1,11 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Send, Mic, MicOff, Trash, Upload, FileText } from 'lucide-react';
+import { Send, Mic, MicOff, Trash, Scale } from 'lucide-react';
 import { useChat } from '../../context/ChatContext';
 import Button from '../ui/Button';
 import ChatMessage from './ChatMessage';
-import FileUpload from './FileUpload';
-import DocumentViewer from './DocumentViewer';
 import TypingIndicator from './TypingIndicator';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SpeechService } from '../../services/speechService';
@@ -73,38 +71,18 @@ declare global {
   }
 }
 
-interface ProcessedDocument {
-  id: string;
-  content: string;
-  metadata: {
-    type: 'complaint' | 'fir' | 'legal_document' | 'other';
-    title: string;
-    date?: string;
-    caseNumber?: string;
-    sections?: string[];
-    keywords?: string[];
-  };
-  fileName: string;
-  fileSize: number;
-  uploadedAt: Date;
-}
-
 const ChatInterface: React.FC = () => {
   const { t } = useTranslation();
   const { 
     currentConversation, 
-    currentDocument, 
     sendMessage, 
     loading, 
-    clearConversation, 
-    setCurrentDocument,
-    queryDocument 
+    clearConversation
   } = useChat();
   
   const [inputValue, setInputValue] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [isSpeechSupported, setIsSpeechSupported] = useState(false);
-  const [showFileUpload, setShowFileUpload] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const speechService = useRef(new SpeechService());
 
@@ -161,50 +139,6 @@ const ChatInterface: React.FC = () => {
     }
   };
 
-  const handleQueryDocument = async (query: string) => {
-    console.log('Handling document query:', { query, currentDocument });
-    if (!currentDocument) {
-      console.error('No document is currently active');
-      return;
-    }
-    
-    setInputValue(query);
-    try {
-      await queryDocument(query);
-    } catch (error) {
-      console.error('Error querying document:', error);
-      await sendMessage('I apologize, but I encountered an error while processing your question. Please try again.');
-    }
-  };
-
-  const handleDocumentProcessed = async (document: ProcessedDocument) => {
-    console.log('Document processed:', document);
-    setShowFileUpload(false);
-    setCurrentDocument(document);
-    
-    // Send a message about the processed document
-    const message = `📄 **Document Uploaded Successfully!**\n\n**${document.metadata.title}**\n\n` +
-      `**Type:** ${document.metadata.type.toUpperCase()}\n` +
-      `**File:** ${document.fileName}\n` +
-      (document.metadata.caseNumber ? `**Case Number:** ${document.metadata.caseNumber}\n` : '') +
-      (document.metadata.date ? `**Date:** ${document.metadata.date}\n` : '') +
-      (document.metadata.sections && document.metadata.sections.length > 0 ? 
-        `**Legal Sections Found:** ${document.metadata.sections.join(', ')}\n` : '') +
-      `\nYou can now ask questions about this document and I'll provide relevant legal analysis and applicable sections.`;
-    
-    try {
-      await sendMessage(message);
-    } catch (error) {
-      console.error('Error sending document processed message:', error);
-    }
-  };
-
-  const handleFileError = (error: Error) => {
-    console.error('File processing error:', error);
-    setShowFileUpload(false);
-    // You could show an error message to the user here
-  };
-
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -212,56 +146,35 @@ const ChatInterface: React.FC = () => {
     }
   };
 
-  const handleRemoveDocument = () => {
-    setCurrentDocument(null);
-  };
-
   return (
-    <div className="flex flex-col h-[calc(100vh-10rem)] md:h-[calc(100vh-8rem)] bg-neutral-50 rounded-lg shadow-md overflow-hidden">
+    <div className="flex flex-col h-[calc(100vh-10rem)] md:h-[calc(100vh-8rem)] bg-white rounded-2xl shadow-2xl overflow-hidden border border-amber-100">
       {/* Chat Header */}
-      <div className="bg-primary-800 text-white p-4 flex justify-between items-center">
-        <div className="flex items-center space-x-3">
-          <h2 className="text-lg font-semibold">{t('app.name')}</h2>
-          {currentDocument && (
-            <div className="flex items-center space-x-2 bg-primary-700 px-3 py-1 rounded-full">
-              <FileText className="h-4 w-4" />
-              <span className="text-sm">{currentDocument.metadata.type.toUpperCase()}</span>
+      <div className="bg-gradient-to-r from-amber-600 to-orange-600 text-white p-6 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iYSIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIj48cGF0aCBkPSJtMCAwaDYwdjYwaC02MHoiIGZpbGw9Im5vbmUiLz48cGF0aCBkPSJtMCA2MGg2MG0tMzAtNjB2NjAiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIwLjUiIG9wYWNpdHk9Ii4xIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIGZpbGw9InVybCgjYSkiLz48L3N2Zz4=')] opacity-10"></div>
+        <div className="relative flex justify-between items-center">
+          <div className="flex items-center space-x-4">
+            <div className="bg-white/20 p-3 rounded-full backdrop-blur-sm">
+              <Scale className="h-6 w-6 text-white" />
             </div>
-          )}
-        </div>
-        <div className="flex space-x-2">
+            <div>
+              <h2 className="text-xl font-bold">{t('app.name')}</h2>
+              <p className="text-amber-100 text-sm">{t('app.tagline')}</p>
+            </div>
+          </div>
           <Button
             variant="outline"
             size="sm"
-            className="!bg-transparent !text-white border-white hover:!bg-white/10"
-            icon={<Upload className="h-4 w-4" />}
-            onClick={() => setShowFileUpload(!showFileUpload)}
-          >
-            Upload
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="!bg-transparent !text-white border-white hover:!bg-white/10"
+            className="!bg-white/10 !text-white !border-white/30 hover:!bg-white/20 backdrop-blur-sm"
             icon={<Trash className="h-4 w-4" />}
             onClick={clearConversation}
           >
-            Clear
+            Clear Chat
           </Button>
         </div>
       </div>
 
-      {/* Document Viewer */}
-      {currentDocument && (
-        <DocumentViewer
-          document={currentDocument}
-          onClose={handleRemoveDocument}
-          onQueryDocument={handleQueryDocument}
-        />
-      )}
-
       {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gradient-to-b from-amber-50/30 to-white">
         {currentConversation?.messages.map((message) => (
           <ChatMessage
             key={message.id}
@@ -272,9 +185,10 @@ const ChatInterface: React.FC = () => {
         <AnimatePresence>
           {loading && (
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3 }}
             >
               <TypingIndicator />
             </motion.div>
@@ -284,26 +198,38 @@ const ChatInterface: React.FC = () => {
       </div>
 
       {/* Input Area */}
-      <div className="border-t border-neutral-200 p-4 bg-white">
-        <form onSubmit={handleSubmit} className="flex space-x-2">
-          <textarea
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={
-              currentDocument 
-                ? `Ask about your ${currentDocument.metadata.type}...`
-                : t('chat.placeholder')
-            }
-            className="flex-1 resize-none border border-neutral-300 rounded-md p-3 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            rows={1}
-            disabled={loading}
-          />
+      <div className="border-t border-amber-100 p-6 bg-gradient-to-r from-amber-50 to-orange-50">
+        <form onSubmit={handleSubmit} className="flex space-x-4">
+          <div className="flex-1 relative">
+            <textarea
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={t('chat.placeholder')}
+              className="w-full resize-none border-2 border-amber-200 rounded-xl p-4 pr-12 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent bg-white/80 backdrop-blur-sm transition-all duration-200 placeholder-gray-500"
+              rows={1}
+              disabled={loading}
+            />
+            {isListening && (
+              <motion.div
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ duration: 1, repeat: Infinity }}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2"
+              >
+                <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+              </motion.div>
+            )}
+          </div>
+          
           <div className="flex space-x-2">
             {isSpeechSupported && (
               <Button
                 type="button"
                 variant={isListening ? 'danger' : 'outline'}
+                className={`!border-2 ${isListening 
+                  ? '!bg-red-500 !border-red-500 !text-white' 
+                  : '!border-amber-300 !text-amber-600 hover:!bg-amber-50'
+                }`}
                 onClick={toggleListening}
                 icon={isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
                 aria-label={isListening ? t('chat.listening') : t('chat.voice')}
@@ -317,21 +243,32 @@ const ChatInterface: React.FC = () => {
               type="submit"
               disabled={!inputValue.trim() || loading}
               isLoading={loading}
+              className="!bg-gradient-to-r !from-amber-500 !to-orange-600 hover:!from-amber-600 hover:!to-orange-700 !text-white !border-0 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200"
               icon={<Send className="h-5 w-5" />}
             >
               {t('chat.send')}
             </Button>
           </div>
         </form>
+        
+        {/* Quick Actions */}
+        <div className="mt-4 flex flex-wrap gap-2">
+          {[
+            "What is section 302 of BNS?",
+            "Explain cybercrime laws",
+            "How to file an FIR?",
+            "Traffic violation penalties"
+          ].map((suggestion, index) => (
+            <button
+              key={index}
+              onClick={() => setInputValue(suggestion)}
+              className="text-xs bg-white/60 hover:bg-white/80 text-amber-700 px-3 py-1 rounded-full border border-amber-200 hover:border-amber-300 transition-all duration-200"
+            >
+              {suggestion}
+            </button>
+          ))}
+        </div>
       </div>
-
-      {/* File Upload Modal */}
-      <FileUpload
-        isVisible={showFileUpload}
-        onFileProcessed={handleDocumentProcessed}
-        onError={handleFileError}
-        onClose={() => setShowFileUpload(false)}
-      />
     </div>
   );
 };
